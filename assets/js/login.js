@@ -18,14 +18,15 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
-// 🎯 Obtener elementos del DOM
+// 🎯 Elementos del DOM
 const loginForm = document.getElementById("loginForm");
 const loginError = document.getElementById("loginError");
 const loginSuccess = document.getElementById("loginPass");
 
-// 🧠 Lógica de envío del formulario
+// 🧠 Envío del formulario
 loginForm?.addEventListener("submit", (e) => {
   e.preventDefault();
+
   const email = document.getElementById("email")?.value.trim();
   const password = document.getElementById("password")?.value.trim();
 
@@ -34,12 +35,18 @@ loginForm?.addEventListener("submit", (e) => {
   signInWithEmailAndPassword(auth, email, password)
     .then((userCredential) => {
       const uid = userCredential.user.uid;
+
+      // ✔️ Mostrar alerta de éxito
       loginSuccess?.classList.remove("d-none");
       loginError?.classList.add("d-none");
+
+      // 🌀 Mostrar preloader (si existe la función)
       if (typeof showPreloader === "function") showPreloader();
+
+      // ⏱️ Esperar suavemente antes de redirigir
       setTimeout(() => {
-        window.location.href = `/editor/index.html`;
-      }, 500);
+        window.location.href = `/editor/index.html`; // o `/editor/${uid}.html` si usás rutas por usuario
+      }, 1200);
     })
     .catch((error) => {
       console.error("[Login Error]:", error.message);
