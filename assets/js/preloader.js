@@ -35,8 +35,9 @@ document.addEventListener("DOMContentLoaded", () => {
 // 👇 Funciones públicas para mostrar/ocultar manualmente
 window.showPreloader = function () {
   const preloader = document.getElementById("preloader");
-  if (preloader) preloader.classList.remove("hide");
+  if (preloader) preloader.classList.remove("d-none", "hide");
 };
+
 
 window.hidePreloader = function () {
   const preloader = document.getElementById("preloader");
