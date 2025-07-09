@@ -1,23 +1,21 @@
-// preloader.js - Manejo automático del preloader
-
 document.addEventListener("DOMContentLoaded", () => {
   const preloader = document.getElementById("preloader");
-  if (!preloader) return;
+  const mainContent = document.getElementById("main-content");
+
+  if (!preloader || !mainContent) return;
 
   let pageLoaded = false;
   let minimumTimePassed = false;
 
-  // ✅ Espera que la página termine de cargar
   window.addEventListener("load", () => {
     pageLoaded = true;
     checkAndHide();
   });
 
-  // ⏱️ Espera mínimo 2.5s antes de ocultar
   setTimeout(() => {
     minimumTimePassed = true;
     checkAndHide();
-  }, 2500);
+  }, 2000); // 2 segundos
 
   function checkAndHide() {
     if (pageLoaded && minimumTimePassed) {
@@ -27,6 +25,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (preloader.parentNode) {
           preloader.parentNode.removeChild(preloader);
         }
+        mainContent.classList.remove("d-none"); // ⬅️ ¡Mostramos contenido ahora!
       }, { once: true });
     }
   }
