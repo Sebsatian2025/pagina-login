@@ -25,7 +25,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const fallbackTimeout = setTimeout(() => {
         mainContent.classList.remove("d-none");
         preloader.remove?.();
-      }, 1000); // 1 segundo de seguridad
+      }, 300); // 1 segundo de seguridad
 
       preloader.addEventListener("transitionend", function handler() {
         preloader.removeEventListener("transitionend", handler);
