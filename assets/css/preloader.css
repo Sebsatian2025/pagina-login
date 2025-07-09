@@ -38,6 +38,24 @@
   text-align: center;
 }
 
+/* Alertas visibles sobre el preloader */
+#loginPass,
+#loginError {
+  position: relative;
+  z-index: 10000; /* más alto que el preloader */
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+/* Cuando la alerta se muestra */
+#loginPass.show,
+#loginError.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+
 /* Animación de rotación */
 @keyframes spin {
   to { transform: rotate(360deg); }
