@@ -20,12 +20,18 @@ document.addEventListener("DOMContentLoaded", () => {
   function checkAndHide() {
     if (pageLoaded && minimumTimePassed) {
       preloader.classList.add("hide");
+
+      // ⏳ Fallback en caso de que transitionend no ocurra
+      const fallbackTimeout = setTimeout(() => {
+        mainContent.classList.remove("d-none");
+        preloader.remove?.();
+      }, 1000); // 1 segundo de seguridad
+
       preloader.addEventListener("transitionend", function handler() {
         preloader.removeEventListener("transitionend", handler);
-        if (preloader.parentNode) {
-          preloader.parentNode.removeChild(preloader);
-        }
-        mainContent.classList.remove("d-none"); // ⬅️ ¡Mostramos contenido ahora!
+        clearTimeout(fallbackTimeout); // Evitamos doble ejecución
+        mainContent.classList.remove("d-none");
+        preloader.remove?.();
       }, { once: true });
     }
   }
@@ -36,7 +42,6 @@ window.showPreloader = function () {
   const preloader = document.getElementById("preloader");
   if (preloader) preloader.classList.remove("d-none", "hide");
 };
-
 
 window.hidePreloader = function () {
   const preloader = document.getElementById("preloader");
