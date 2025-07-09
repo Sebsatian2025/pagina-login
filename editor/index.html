@@ -20,27 +20,26 @@
   <!-- Preloader -->
   <div id="preloader" class="d-none">
     <div class="spinner-page-load"></div>
+    <div class="preloader-text">Cargando tu espacio...</div>
   </div>
 
-  <!-- Contenido del editor -->
-  <div class="container text-center">
-    <h1>👋 ¡Hola, estás dentro del editor!</h1>
-    <p>ID de usuario: <code>[uid]</code></p>
+  <!-- Contenido del editor oculto hasta que cargue -->
+  <div id="main-content" class="d-none">
+    <div class="container text-center">
+      <h1>👋 ¡Hola, estás dentro del editor!</h1>
+      <p>ID de usuario: <code>[uid]</code></p>
+    </div>
   </div>
 
   <!-- Scripts -->
   <script src="../assets/js/preloader.js" defer></script>
   <script>
     window.addEventListener("DOMContentLoaded", () => {
-      if (typeof showPreloader === "function") {
-        showPreloader();
-      }
+      if (typeof showPreloader === "function") showPreloader();
     });
 
     window.addEventListener("load", () => {
-      if (typeof hidePreloader === "function") {
-        hidePreloader();
-      }
+      if (typeof hidePreloader === "function") hidePreloader();
     });
   </script>
 </body>
