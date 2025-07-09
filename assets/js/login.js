@@ -40,13 +40,16 @@ loginForm?.addEventListener("submit", (e) => {
       loginSuccess?.classList.remove("d-none");
       loginError?.classList.add("d-none");
 
-      // 🌀 Mostrar preloader (si existe la función)
-      if (typeof showPreloader === "function") showPreloader();
-
-      // ⏱️ Esperar suavemente antes de redirigir
+      // ⏳ Esperar para que el usuario vea la alerta
       setTimeout(() => {
-        window.location.href = `/editor/index.html`; // o `/editor/${uid}.html` si usás rutas por usuario
-      }, 1200);
+        // 🌀 Mostrar preloader
+        if (typeof showPreloader === "function") showPreloader();
+
+        // Esperar otro segundo antes de redirigir
+        setTimeout(() => {
+          window.location.href = `/editor/index.html`; // o `/editor/${uid}.html`
+        }, 1000);
+      }, 1000);
     })
     .catch((error) => {
       console.error("[Login Error]:", error.message);
