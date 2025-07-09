@@ -23,6 +23,11 @@ const loginForm = document.getElementById("loginForm");
 const loginError = document.getElementById("loginError");
 const loginSuccess = document.getElementById("loginPass");
 
+// 🗺️ Mapa de redirecciones por UID
+const redirections = {
+  "CE71EXrIdmhRBLfnjpR0plrAMeG2": "https://heartfelt-sunflower-58e1df.netlify.app/#page-top"
+};
+
 // 🧠 Envío del formulario
 loginForm?.addEventListener("submit", (e) => {
   e.preventDefault();
@@ -42,14 +47,17 @@ loginForm?.addEventListener("submit", (e) => {
       loginError?.classList.add("d-none");
       loginError?.classList.remove("show");
 
-      // ⏳ Esperar para que el usuario la vea
+      // 📍 Obtener la URL de destino para este UID o usar editor por defecto
+      const destino = redirections[uid] || "/editor/index.html";
+
+      // ⏳ Esperar para que el usuario vea la alerta
       setTimeout(() => {
         // 🌀 Mostrar preloader
         if (typeof showPreloader === "function") showPreloader();
 
         // Esperar otro segundo antes de redirigir
         setTimeout(() => {
-          window.location.href = `/editor/index.html`;
+          window.location.href = destino;
         }, 1000);
       }, 1200);
     })
