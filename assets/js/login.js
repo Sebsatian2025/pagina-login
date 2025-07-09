@@ -38,7 +38,7 @@ loginForm?.addEventListener("submit", (e) => {
       loginError?.classList.add("d-none");
       if (typeof showPreloader === "function") showPreloader();
       setTimeout(() => {
-        window.location.href = `/editor/${uid}.html`;
+        window.location.href = `/editor/index.html`;
       }, 500);
     })
     .catch((error) => {
