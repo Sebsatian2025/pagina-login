@@ -36,24 +36,30 @@ loginForm?.addEventListener("submit", (e) => {
     .then((userCredential) => {
       const uid = userCredential.user.uid;
 
-      // ✔️ Mostrar alerta de éxito
+      // ✔️ Mostrar alerta de éxito animada
       loginSuccess?.classList.remove("d-none");
+      loginSuccess?.classList.add("show");
       loginError?.classList.add("d-none");
+      loginError?.classList.remove("show");
 
-      // ⏳ Esperar para que el usuario vea la alerta
+      // ⏳ Esperar para que el usuario la vea
       setTimeout(() => {
         // 🌀 Mostrar preloader
         if (typeof showPreloader === "function") showPreloader();
 
         // Esperar otro segundo antes de redirigir
         setTimeout(() => {
-          window.location.href = `/editor/index.html`; // o `/editor/${uid}.html`
+          window.location.href = `/editor/index.html`;
         }, 1000);
-      }, 1000);
+      }, 1200);
     })
     .catch((error) => {
       console.error("[Login Error]:", error.message);
+
+      // ❌ Mostrar alerta de error animada
       loginError?.classList.remove("d-none");
+      loginError?.classList.add("show");
       loginSuccess?.classList.add("d-none");
+      loginSuccess?.classList.remove("show");
     });
 });
