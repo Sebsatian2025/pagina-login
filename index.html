@@ -1,42 +1,91 @@
 <!DOCTYPE html>
-<html data-bs-theme="light" lang="en">
-
+<html data-bs-theme="light" lang="es">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
-    <title>pagina de loggin</title>
-    <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css?h=9f3738c3b02e0983f8d5f3b19c8cdd33">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-    <link rel="stylesheet" href="assets/css/styles.min.css?h=977878dc5300640fa88909779dcec7ce">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no" />
+  <title>Página de Login</title>
+  <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+  <link rel="stylesheet" href="assets/css/styles.min.css" />
 </head>
-
 <body>
-    <div id="login-one" class="login-one"
-        style="color: var(--bs-secondary);font-style: italic;background: var(--bs-dark-bg-subtle);">
-        <form class="login-one-form" style="height: 502.4px;">
-            <div class="col text-center">
-                <div class="login-one-ico"><i class="fa fa-lock" id="lockico"
-                        style="font-size: 70px;color: var(--bs-highlight-color);"></i></div>
-                <div class="text-center form-group mb-3">
-                    <div>
-                        <h3 id="heading" style="margin-bottom: 0px;">Log in:<br><br></h3>
-                    </div><input class="form-control text-center" type="text" id="input-1" placeholder="Tu usuario">
-                    <hr style="opacity: 0;"><input class="form-control text-center" type="password" id="input-2"
-                        placeholder="Password">
-                    <hr style="opacity: 0;"><button class="btn" id="button"
-                        style="margin-left: 0px;color: var(--bs-black);background: var(--bs-gray-500);font-weight: bold;"
-                        type="submit">ENTRAR</button>
-                </div>
-            </div>
-        </form>
-        <div id="loginPass" class="alert alert-success d-none" role="alert"><span><strong>Alerta: </strong>Usuario y
-                contraseña correctos.</span></div>
-        <div id="loginError" class="alert alert-danger d-none" role="alert"><span><strong>Alerta:</strong> Usuario o
-                contraseña incorrectos.</span></div>
-        <div></div>
-    </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="assets/js/script.min.js?h=0ac0d128bea845f21220d87c18bc867c"></script>
-</body>
+  <!-- Preloader (opcional, si ya lo tenés en tu proyecto) -->
+  <div id="preloader" class="d-none">
+    <div class="spinner-page-load"></div>
+  </div>
 
+  <!-- Login -->
+  <div id="login-one" class="login-one" style="color: var(--bs-secondary); background: var(--bs-dark-bg-subtle); font-style: italic;">
+    <form id="loginForm" class="login-one-form" style="height: auto;">
+      <div class="col text-center">
+        <div class="login-one-ico">
+          <i class="fa fa-lock" id="lockico" style="font-size: 70px; color: var(--bs-highlight-color);"></i>
+        </div>
+        <div class="text-center form-group mb-3">
+          <h3 id="heading" class="mb-4">Log in:</h3>
+          <input class="form-control text-center mb-2" type="text" id="email" placeholder="Tu usuario" required />
+          <input class="form-control text-center mb-2" type="password" id="password" placeholder="Password" required />
+          <button class="btn btn-secondary fw-bold w-100 mt-2" id="btnLogin" type="submit">ENTRAR</button>
+        </div>
+      </div>
+    </form>
+
+    <!-- Alertas -->
+    <div id="loginPass" class="alert alert-success d-none mt-3 text-center" role="alert">
+      <strong>Listo:</strong> Usuario y contraseña correctos.
+    </div>
+    <div id="loginError" class="alert alert-danger d-none mt-3 text-center" role="alert">
+      <strong>Alerta:</strong> Usuario o contraseña incorrectos.
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="assets/js/script.min.js"></script>
+
+  <!-- Firebase Login Script -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBT02qJDOa6N1giU-TmSd7gZrsVLtamIfc",
+      authDomain: "admin-pwa-f1cf8.firebaseapp.com",
+      projectId: "admin-pwa-f1cf8",
+      storageBucket: "admin-pwa-f1cf8.firebasestorage.app",
+      messagingSenderId: "958223835117",
+      appId: "1:958223835117:web:165c816afa75d9a4da11e4",
+      measurementId: "G-F0MEWWTCGQ"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    const loginForm = document.getElementById("loginForm");
+    const loginError = document.getElementById("loginError");
+    const loginSuccess = document.getElementById("loginPass");
+
+    loginForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const email = document.getElementById("email").value.trim();
+      const pass = document.getElementById("password").value.trim();
+
+      signInWithEmailAndPassword(auth, email, pass)
+        .then((userCredential) => {
+          const uid = userCredential.user.uid;
+          loginSuccess.classList.remove("d-none");
+          loginError.classList.add("d-none");
+          if (typeof showPreloader === "function") showPreloader();
+          setTimeout(() => {
+            window.location.href = `/editor/${uid}.html`;
+          }, 500);
+        })
+        .catch((error) => {
+          console.error(error.message);
+          loginError.classList.remove("d-none");
+          loginSuccess.classList.add("d-none");
+        });
+    });
+  </script>
+</body>
 </html>
