@@ -1,22 +1,24 @@
 <!DOCTYPE html>
-<html data-bs-theme="light" lang="es">
+<html lang="es" data-bs-theme="light">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no" />
   <title>Página de Login</title>
+
+  <!-- Estilos -->
   <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
   <link rel="stylesheet" href="assets/css/styles.min.css" />
 </head>
 <body>
-  <!-- Preloader (opcional, si ya lo tenés en tu proyecto) -->
+  <!-- Preloader (opcional, debe tener CSS y JS asociados si lo vas a usar) -->
   <div id="preloader" class="d-none">
     <div class="spinner-page-load"></div>
   </div>
 
   <!-- Login -->
   <div id="login-one" class="login-one" style="color: var(--bs-secondary); background: var(--bs-dark-bg-subtle); font-style: italic;">
-    <form id="loginForm" class="login-one-form" style="height: auto;">
+    <form id="loginForm" class="login-one-form">
       <div class="col text-center">
         <div class="login-one-ico">
           <i class="fa fa-lock" id="lockico" style="font-size: 70px; color: var(--bs-highlight-color);"></i>
@@ -39,53 +41,10 @@
     </div>
   </div>
 
-  <!-- Bootstrap JS -->
+  <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="assets/js/script.min.js"></script>
-
-  <!-- Firebase Login Script -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyBT02qJDOa6N1giU-TmSd7gZrsVLtamIfc",
-      authDomain: "admin-pwa-f1cf8.firebaseapp.com",
-      projectId: "admin-pwa-f1cf8",
-      storageBucket: "admin-pwa-f1cf8.firebasestorage.app",
-      messagingSenderId: "958223835117",
-      appId: "1:958223835117:web:165c816afa75d9a4da11e4",
-      measurementId: "G-F0MEWWTCGQ"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-
-    const loginForm = document.getElementById("loginForm");
-    const loginError = document.getElementById("loginError");
-    const loginSuccess = document.getElementById("loginPass");
-
-    loginForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const email = document.getElementById("email").value.trim();
-      const pass = document.getElementById("password").value.trim();
-
-      signInWithEmailAndPassword(auth, email, pass)
-        .then((userCredential) => {
-          const uid = userCredential.user.uid;
-          loginSuccess.classList.remove("d-none");
-          loginError.classList.add("d-none");
-          if (typeof showPreloader === "function") showPreloader();
-          setTimeout(() => {
-            window.location.href = `/editor/${uid}.html`;
-          }, 500);
-        })
-        .catch((error) => {
-          console.error(error.message);
-          loginError.classList.remove("d-none");
-          loginSuccess.classList.add("d-none");
-        });
-    });
-  </script>
+  <script src="assets/js/preloader.js" defer></script>
+  <script type="module" src="assets/js/login.js"></script>
 </body>
 </html>
