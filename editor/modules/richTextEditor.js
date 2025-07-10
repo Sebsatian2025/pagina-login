@@ -1,5 +1,5 @@
 // public/editor/modules/richTextEditor.js
-import { saveEdit }   from "./firestore.js";
+import { saveEdit }    from "./firestore.js";
 import { getSelector } from "./utils.js";
 
 export function onChangeRichText(ctxMenu, uid, hideMenu) {
@@ -7,30 +7,41 @@ export function onChangeRichText(ctxMenu, uid, hideMenu) {
   el.contentEditable = true;
   el.focus();
 
-  // 1) Crear toolbar flotante
+  // 1. Crear toolbar
   const tb = document.createElement("div");
   tb.className = "rich-toolbar";
-  const { x, y } = ctxMenu;
-  tb.style.left = `${x}px`;
-  tb.style.top  = `${y - 10}px`;
+  tb.style.left = `${ctxMenu.x}px`;
+  tb.style.top  = `${ctxMenu.y - 10}px`;
 
+  // 2. Botones esenciales
   tb.innerHTML = `
     <button data-cmd="bold"><b>B</b></button>
     <button data-cmd="italic"><i>I</i></button>
+    <button data-cmd="underline"><u>U</u></button>
     <button data-cmd="strikeThrough"><s>S</s></button>
+    <input type="color" data-cmd="foreColor" title="Color" style="width:28px; padding:0; border:none;" />
   `;
+
   document.body.appendChild(tb);
 
-  // 2) Conectar botones a execCommand
-  tb.querySelectorAll("button").forEach(btn => {
-    btn.addEventListener("click", e => {
+  // 3. Ejecutar comando al pulsar
+  tb.querySelectorAll("[data-cmd]").forEach(control => {
+    control.addEventListener("click", e => {
       e.preventDefault();
-      const cmd = btn.dataset.cmd;
-      document.execCommand(cmd, false, null);
+      const cmd  = control.dataset.cmd;
+      const val  = control.tagName === "INPUT" ? control.value : null;
+      document.execCommand(cmd, false, val);
     });
+    // para el <input type="color">
+    if (control.tagName === "INPUT") {
+      control.addEventListener("input", e => {
+        const cmd = e.target.dataset.cmd;
+        document.execCommand(cmd, false, e.target.value);
+      });
+    }
   });
 
-  // 3) Cleanup + guardar al blur
+  // 4. Al perder foco guardamos el HTML
   el.onblur = async () => {
     el.contentEditable = false;
     hideMenu();
@@ -40,9 +51,9 @@ export function onChangeRichText(ctxMenu, uid, hideMenu) {
     const html     = el.innerHTML;
     try {
       await saveEdit(uid, selector, "html", html);
-      console.log("✔️ HTML guardado:", selector);
+      console.log("✔️ Guardado HTML:", selector);
     } catch(err) {
-      console.error("❌ Error guardando HTML:", err);
+      console.error("❌ Error guardando:", err);
     }
   };
 }
