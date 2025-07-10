@@ -58,9 +58,9 @@ function EditorMVP({ htmlUrl, uid }) {
     }
   }, [uid]);
 
-  // 4.2) Fetch de la landing + estilos
+  // 4.2) Fetch de la landing + inyección de head completo
   useEffect(() => {
-    if (!htmlUrl) return console.error("Falta htmlUrl");
+    if (!htmlUrl) return console.error("Falta htmlUrl en la query.");
     fetch(htmlUrl)
       .then(r => r.text())
       .then(text => {
@@ -68,26 +68,32 @@ function EditorMVP({ htmlUrl, uid }) {
         const doc    = parser.parseFromString(text, "text/html");
         const origin = new URL(htmlUrl).origin;
 
-        // Base para rutas relativas
+        // A) <base> para rutas relativas
         const baseEl = document.createElement("base");
         baseEl.href  = origin + "/";
         document.head.insertBefore(baseEl, document.head.firstChild);
 
-        // Clonar CSS externos
-        doc.head.querySelectorAll("link[rel=stylesheet]").forEach(link => {
-          const href    = new URL(link.href, origin).href;
-          const newLink = document.createElement("link");
-          newLink.rel   = "stylesheet";
-          newLink.href  = href;
+        // B) Clonar <meta>
+        doc.head.querySelectorAll("meta").forEach(m => {
+          document.head.appendChild(m.cloneNode(true));
+        });
+
+        // C) Clonar todo <link href="...">
+        doc.head.querySelectorAll("link[href]").forEach(link => {
+          const newLink = link.cloneNode();
+          // si es ruta relativa, convertir a absoluta
+          if (!newLink.href.startsWith("http")) {
+            newLink.href = new URL(newLink.getAttribute("href"), origin).href;
+          }
           document.head.appendChild(newLink);
         });
 
-        // Clonar estilos inline
+        // D) Clonar estilos inline
         doc.head.querySelectorAll("style").forEach(s => {
           document.head.appendChild(s.cloneNode(true));
         });
 
-        // Guardar body para después inyectar
+        // E) Guardar el <body> para inyectar luego
         setHtml(doc.body.innerHTML);
       })
       .catch(err => console.error("Fetch error:", err));
@@ -193,7 +199,6 @@ onAuthStateChanged(auth, user => {
   const uid = user.uid;
   console.log("Usuario autenticado:", uid);
 
-  // Renderizar EditorMVP
   const props = { htmlUrl, uid };
   if (ReactDOM.createRoot) {
     ReactDOM.createRoot(root).render(
