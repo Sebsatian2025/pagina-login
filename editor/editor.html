@@ -10,6 +10,7 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
   <style>
+    /* menú contextual */
     .ctx-menu {
       position: absolute;
       transform: translate(-50%, -100%);
@@ -36,7 +37,7 @@
   </style>
 </head>
 <body>
-  <div id="editor-root"></div>
+  <div id="editor-root" style="min-height:100vh;"></div>
 
   <script>
   (function(){
@@ -44,61 +45,75 @@
     const ReactDOM  = window.ReactDOM;
     const { useState, useEffect, useRef } = React;
 
-    // Lee un parámetro de la URL
+    // Helper: leer un parámetro
     function getParam(name) {
       const v = new URLSearchParams(window.location.search).get(name);
       return v ? decodeURIComponent(v) : '';
     }
 
+    // EditorMVP en JS puro
     function EditorMVP({ htmlUrl, uid }) {
       const containerRef = useRef(null);
-      const [html, setHtml] = useState('');
+      const [editedHtml, setEditedHtml] = useState('');
       const [ctxMenu, setCtxMenu] = useState({
-        show: false, x:0, y:0, type:null, target:null
+        show:false, x:0, y:0, type:null, target:null
       });
 
-      // 1) Fetch del HTML remoto
+      // 1) Fetch y parseo de la landing
       useEffect(() => {
         if (!htmlUrl) {
-          console.warn("Falta htmlUrl en querystring");
+          console.error("❌ No se proporcionó htmlUrl en la query.");
           return;
         }
-        console.log("🔍 Fetching", htmlUrl);
+        console.log("📥 Fetch de", htmlUrl);
         fetch(htmlUrl)
-          .then(r => r.text())
-          .then(setHtml)
-          .catch(err => console.error("Fetch error:", err));
+          .then(res => res.text())
+          .then(text => {
+            // Parseamos el HTML para extraer <head> y <body>
+            const parser = new DOMParser();
+            const doc    = parser.parseFromString(text, 'text/html');
+            // 1a) Importamos estilos del <head>
+            doc.head.querySelectorAll('link[rel="stylesheet"], style').forEach(el => {
+              document.head.appendChild(el.cloneNode(true));
+            });
+            // 1b) Inyectamos sólo el <body>
+            setEditedHtml(doc.body.innerHTML);
+          })
+          .catch(err => console.error("❌ Fetch error:", err));
       }, [htmlUrl]);
 
-      // 2) Inyectar data-editable una vez cargado
+      // 2) Inyectar atributos data-editable
       useEffect(() => {
-        if (!html) return;
+        if (!editedHtml) return;
         const root = containerRef.current;
-        root.innerHTML = html;
-
+        // Volcamos el HTML
+        root.innerHTML = editedHtml;
+        // Marcar texto
         root.querySelectorAll('h1,h2,h3,p,span').forEach(el => {
           el.dataset.editableType = 'text';
           el.contentEditable = false;
         });
+        // Marcar imágenes
         root.querySelectorAll('img').forEach(el => {
           el.dataset.editableType = 'image';
         });
+        // Marcar enlaces
         root.querySelectorAll('a').forEach(el => {
           el.dataset.editableType = 'link';
         });
-      }, [html]);
+      }, [editedHtml]);
 
-      // 3) Mostrar menú contextual
+      // 3) Capturar click/tap para menú
       useEffect(() => {
         const handler = e => {
           const el = e.target.closest('[data-editable-type]');
-          if (!el) return setCtxMenu({ show: false });
+          if (!el) return setCtxMenu({ show:false });
           e.preventDefault();
           const r = el.getBoundingClientRect();
           setCtxMenu({
             show: true,
-            x:  r.left + r.width/2,
-            y:  r.top - 8,
+            x: r.left + r.width/2,
+            y: r.top - 8,
             type: el.dataset.editableType,
             target: el
           });
@@ -114,21 +129,22 @@
         el.focus();
         el.onblur = () => {
           el.contentEditable = false;
-          setCtxMenu({ show: false });
-          console.log("Texto editado:", el.innerText);
+          setCtxMenu({ show:false });
+          console.log("✏️ Texto:", el.innerText);
         };
       }
       function onChangeImage() {
         const el = ctxMenu.target;
         const inp = document.createElement('input');
-        inp.type = 'file'; inp.accept = 'image/*';
+        inp.type = 'file'; inp.accept='image/*';
         inp.onchange = () => {
           const file = inp.files[0];
-          if (!file) return setCtxMenu({ show: false });
+          if (!file) return setCtxMenu({ show:false });
           const reader = new FileReader();
           reader.onload = () => {
             el.src = reader.result;
-            setCtxMenu({ show: false });
+            setCtxMenu({ show:false });
+            console.log("🖼️ Imagen cambiada");
           };
           reader.readAsDataURL(file);
         };
@@ -137,19 +153,22 @@
       function onChangeLink() {
         const el = ctxMenu.target;
         const url = prompt('Pega la nueva URL:');
-        if (url) el.href = url;
-        setCtxMenu({ show: false });
+        if (url) {
+          el.href = url;
+          console.log("🔗 Link cambiado:", url);
+        }
+        setCtxMenu({ show:false });
       }
 
-      // 5) Render usando createElement
+      // 5) Render con createElement
       return React.createElement(
         React.Fragment,
         null,
-        React.createElement('div', { ref: containerRef }),
+        React.createElement('div',{ref:containerRef}),
         ctxMenu.show && ReactDOM.createPortal(
-          React.createElement('div', {
-            className: 'ctx-menu',
-            style: { left: ctxMenu.x, top: ctxMenu.y }
+          React.createElement('div',{
+            className:'ctx-menu',
+            style:{left:ctxMenu.x, top:ctxMenu.y}
           },
             ctxMenu.type==='text'  && React.createElement('button',{onClick:onChangeText},  'Cambiar texto'),
             ctxMenu.type==='image' && React.createElement('button',{onClick:onChangeImage}, 'Cambiar imagen'),
@@ -163,19 +182,13 @@
     // Montaje final
     const htmlUrl = getParam('htmlUrl');
     const uid     = getParam('uid');
-    console.log("🚀 Iniciando EditorMVP", { htmlUrl, uid });
+    console.log("🚀 Lanzando EditorMVP", {htmlUrl, uid});
 
     const root = document.getElementById('editor-root');
-    if (ReactDOM.createRoot) {
-      ReactDOM.createRoot(root).render(
-        React.createElement(EditorMVP, { htmlUrl, uid })
-      );
-    } else {
-      ReactDOM.render(
-        React.createElement(EditorMVP, { htmlUrl, uid }),
-        root
-      );
-    }
+    ReactDOM.createRoot
+      ? ReactDOM.createRoot(root).render(React.createElement(EditorMVP,{htmlUrl,uid}))
+      : ReactDOM.render(React.createElement(EditorMVP,{htmlUrl,uid}), root);
+
   })();
   </script>
 </body>
