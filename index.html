@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no" />
   <title>Página de Login</title>
 
-  <!-- Estilos -->
+  <!-- Estilos del Admin -->
   <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
   <link rel="stylesheet" href="assets/css/styles.min.css" />
 </head>
 <body>
-  <!-- Preloader (opcional, debe tener CSS y JS asociados si lo vas a usar) -->
+  <!-- Preloader (opcional) -->
   <div id="preloader" class="d-none">
     <div class="spinner-page-load"></div>
   </div>
@@ -25,26 +25,25 @@
         </div>
         <div class="text-center form-group mb-3">
           <h3 id="heading" class="mb-4">Log in:</h3>
-          <input class="form-control text-center mb-2" type="text" id="email" placeholder="Tu usuario" required />
-          <input class="form-control text-center mb-2" type="password" id="password" placeholder="Password" required />
+          <input class="form-control text-center mb-2" type="text"     id="email"    placeholder="Tu usuario" required />
+          <input class="form-control text-center mb-2" type="password" id="password" placeholder="Password"     required />
           <button class="btn btn-secondary fw-bold w-100 mt-2" id="btnLogin" type="submit">ENTRAR</button>
         </div>
       </div>
     </form>
 
     <!-- Alertas -->
-    <div id="loginPass" class="alert alert-success d-none mt-3 text-center" role="alert">
+    <div id="loginPass"  class="alert alert-success d-none mt-3 text-center" role="alert">
       <strong>Listo:</strong> Usuario y contraseña correctos.
     </div>
-    <div id="loginError" class="alert alert-danger d-none mt-3 text-center" role="alert">
+    <div id="loginError" class="alert alert-danger  d-none mt-3 text-center" role="alert">
       <strong>Alerta:</strong> Usuario o contraseña incorrectos.
     </div>
   </div>
 
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="assets/js/script.min.js"></script>
   <script src="assets/js/preloader.js" defer></script>
-  <script type="module" src="assets/js/login.js"></script>
+  <script type="module" src="login.js"></script>
 </body>
 </html>
