@@ -1,5 +1,4 @@
-// login.js - Gestión de login con Firebase + Firestore + Redirección dinámica
-
+// login.js
 import { initializeApp }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword }
@@ -32,70 +31,49 @@ const loginSuccess = document.getElementById("loginPass");
 loginForm?.addEventListener("submit", async (e) => {
   e.preventDefault();
   console.clear();
-  console.log("🔹 submit recibido");
 
-  // Ocultar las alertas
+  // Ocultar alertas
   loginError.classList.add("d-none");
   loginSuccess.classList.add("d-none");
 
   const email    = document.getElementById("email")?.value.trim();
   const password = document.getElementById("password")?.value.trim();
-  console.log("📧", email, "🔑", password ? "****" : "(vacío)");
-
   if (!email || !password) {
-    console.warn("Campos vacíos, abortando");
-    return;
+    loginError.textContent = "Completa ambos campos";
+    return loginError.classList.remove("d-none");
   }
 
   let uid;
   // 5) Intentar autenticación
   try {
-    console.log("➡️ Intentando signInWithEmailAndPassword...");
     const credential = await signInWithEmailAndPassword(auth, email, password);
     uid = credential.user.uid;
-    console.log("✅ Auth OK, uid:", uid);
-
     loginSuccess.classList.remove("d-none");
-    loginSuccess.classList.add("show");
-  } catch (authError) {
-    console.error("❌ Auth failed:", authError.code, authError.message);
+  } catch {
     loginError.textContent = "Usuario o contraseña incorrectos";
-    loginError.classList.remove("d-none");
-    loginError.classList.add("show");
-    return;
+    return loginError.classList.remove("d-none");
   }
 
   // 6) Leer URL de landing desde Firestore
-  let baseUrl = "";
+  let baseUrl = window.location.origin;
   try {
-    console.log("➡️ Buscando documento sites/", uid);
-    const siteRef  = doc(db, "sites", uid);
-    const siteSnap = await getDoc(siteRef);
-
+    const siteSnap = await getDoc(doc(db, "sites", uid));
     if (siteSnap.exists()) {
       baseUrl = siteSnap.data().url;
-      console.log("📄 URL encontrada:", baseUrl);
-    } else {
-      console.warn("⚠️ No hay documento sites/", uid);
-      baseUrl = window.location.origin; // fallback
     }
-  } catch (dbError) {
-    console.error("❌ Firestore fetch failed:", dbError.code, dbError.message);
+  } catch {
     loginError.textContent = "Error cargando datos, intente luego";
-    loginError.classList.remove("d-none");
-    loginError.classList.add("show");
-    return;
+    return loginError.classList.remove("d-none");
   }
 
-  // 7) Redirigir al editor global
+  // 7) Redirigir al editor
   const htmlUrl = encodeURIComponent(`${baseUrl}/index.html`);
   const destino = `/editor/editor.html?uid=${uid}&htmlUrl=${htmlUrl}`;
-  console.log("➡️ Redirigiendo a", destino);
 
-  setTimeout(() => {
-    if (typeof showPreloader === "function") showPreloader();
-    setTimeout(() => {
-      window.location.href = destino;
-    }, 1000);
-  }, 1200);
+  if (typeof showPreloader === "function") {
+    showPreloader();
+    setTimeout(() => (window.location.href = destino), 800);
+  } else {
+    window.location.href = destino;
+  }
 });
