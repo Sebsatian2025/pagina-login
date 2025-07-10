@@ -3,12 +3,13 @@ import { initializeApp }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import React, { useState, useEffect, useRef } from 
-  "https://esm.sh/react@18.2.0";
-import ReactDOM from 
-  "https://esm.sh/react-dom@18.2.0";
+import { getAuth, onAuthStateChanged }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import React, { useState, useEffect, useRef } 
+  from "https://esm.sh/react@18.2.0";
+import ReactDOM from "https://esm.sh/react-dom@18.2.0";
 
-// 1) Inicializa Firebase (igual que en tu login.js)
+// 1) Inicializar Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyBT02qJDOa6N1giU-TmSd7gZrsVLtamIfc",
   authDomain: "admin-pwa-f1cf8.firebaseapp.com",
@@ -18,22 +19,24 @@ const firebaseConfig = {
   appId: "1:958223835117:web:165c816afa75d9a4da11e4",
   measurementId: "G-F0MEWWTCGQ"
 };
-const app = initializeApp(firebaseConfig);
-const db  = getFirestore(app);
+const app  = initializeApp(firebaseConfig);
+const db   = getFirestore(app);
+const auth = getAuth(app);
 
-// 2) Helpers para Firestore
+// 2) Helpers Firestore
 async function saveEdit(uid, selector, field, value) {
   const ref  = doc(db, "edits", uid);
   const data = { [selector]: { [field]: value } };
   await setDoc(ref, data, { merge: true });
 }
+
 async function loadEdits(uid) {
   const ref  = doc(db, "edits", uid);
   const snap = await getDoc(ref);
   return snap.exists() ? snap.data() : {};
 }
 
-// 3) Lee parámetros de querystring
+// 3) Leer parámetros de la URL
 function getParam(name) {
   const p = new URLSearchParams(window.location.search).get(name);
   return p ? decodeURIComponent(p) : "";
@@ -48,13 +51,14 @@ function EditorMVP({ htmlUrl, uid }) {
     show:false, x:0, y:0, type:null, target:null
   });
 
-  // 4.1) Carga previas ediciones
+  // 4.1) Cargar ediciones previas
   useEffect(() => {
-    if (!uid) return;
-    loadEdits(uid).then(setEdits);
+    if (uid) {
+      loadEdits(uid).then(setEdits).catch(console.error);
+    }
   }, [uid]);
 
-  // 4.2) Fetch landing + estilos
+  // 4.2) Fetch de la landing + estilos
   useEffect(() => {
     if (!htmlUrl) return console.error("Falta htmlUrl");
     fetch(htmlUrl)
@@ -64,12 +68,12 @@ function EditorMVP({ htmlUrl, uid }) {
         const doc    = parser.parseFromString(text, "text/html");
         const origin = new URL(htmlUrl).origin;
 
-        // base para rutas relativas
+        // Base para rutas relativas
         const baseEl = document.createElement("base");
         baseEl.href  = origin + "/";
         document.head.insertBefore(baseEl, document.head.firstChild);
 
-        // clonar CSS externos
+        // Clonar CSS externos
         doc.head.querySelectorAll("link[rel=stylesheet]").forEach(link => {
           const href    = new URL(link.href, origin).href;
           const newLink = document.createElement("link");
@@ -78,12 +82,12 @@ function EditorMVP({ htmlUrl, uid }) {
           document.head.appendChild(newLink);
         });
 
-        // clonar <style>
+        // Clonar estilos inline
         doc.head.querySelectorAll("style").forEach(s => {
           document.head.appendChild(s.cloneNode(true));
         });
 
-        // guardar body
+        // Guardar body para después inyectar
         setHtml(doc.body.innerHTML);
       })
       .catch(err => console.error("Fetch error:", err));
@@ -95,7 +99,7 @@ function EditorMVP({ htmlUrl, uid }) {
     const root = containerRef.current;
     root.innerHTML = html;
 
-    // aplicar edits previos
+    // Aplicar ediciones previas
     Object.entries(edits).forEach(([sel, ch]) => {
       const el = root.querySelector(sel);
       if (!el) return;
@@ -104,10 +108,10 @@ function EditorMVP({ htmlUrl, uid }) {
       if (ch.src)  el.src       = ch.src;
     });
 
-    // marcar editables
+    // Marcar editables
     root.querySelectorAll("h1,h2,h3,p,span").forEach(el => {
-      el.dataset.editableType  = "text";
-      el.contentEditable       = false;
+      el.dataset.editableType = "text";
+      el.contentEditable      = false;
     });
     root.querySelectorAll("img").forEach(el => {
       el.dataset.editableType = "image";
@@ -117,16 +121,16 @@ function EditorMVP({ htmlUrl, uid }) {
     });
   }, [html, edits]);
 
-  // 4.4) Context menu listener
+  // 4.4) Menú contextual
   useEffect(() => {
     const handler = e => {
       const el = e.target.closest("[data-editable-type]");
-      if (!el) return setCtxMenu(s => ({ ...s, show: false }));
+      if (!el) return setCtxMenu(s => ({ ...s, show:false }));
       e.preventDefault();
       const r = el.getBoundingClientRect();
       setCtxMenu({
         show:   true,
-        x:      r.left + r.width / 2,
+        x:      r.left + r.width/2,
         y:      r.top - 8,
         type:   el.dataset.editableType,
         target: el
@@ -136,16 +140,16 @@ function EditorMVP({ htmlUrl, uid }) {
     return () => document.removeEventListener("click", handler, true);
   }, []);
 
-  // 4.5) Cambiar texto y guardar
+  // 4.5) Editar texto y guardar
   function onChangeText() {
     const el = ctxMenu.target;
     el.contentEditable = true;
     el.focus();
     el.onblur = async () => {
       el.contentEditable = false;
-      setCtxMenu(s => ({ ...s, show: false }));
+      setCtxMenu(s => ({ ...s, show:false }));
 
-      // selector simple por id o posición
+      // Selector único (id o nth-child)
       const selector = el.id
         ? `#${el.id}`
         : `${el.tagName.toLowerCase()}:nth-child(${[...el.parentNode.children].indexOf(el)+1})`;
@@ -160,7 +164,7 @@ function EditorMVP({ htmlUrl, uid }) {
     };
   }
 
-  // 4.6) Render (solo texto por ahora)
+  // 4.6) Render con createElement
   return React.createElement(
     React.Fragment,
     null,
@@ -168,26 +172,37 @@ function EditorMVP({ htmlUrl, uid }) {
     ctxMenu.show && ReactDOM.createPortal(
       React.createElement(
         "div",
-        { className: "ctx-menu", style: { left: ctxMenu.x, top: ctxMenu.y } },
-        ctxMenu.type === "text" &&
-          React.createElement("button", { onClick: onChangeText }, "Cambiar texto")
+        { className:"ctx-menu", style:{ left:ctxMenu.x, top:ctxMenu.y } },
+        ctxMenu.type==="text" &&
+          React.createElement("button",{ onClick:onChangeText }, "Cambiar texto")
       ),
       document.body
     )
   );
 }
 
-// 5) Montaje
+// 5) Montaje solo tras Auth
 const htmlUrl = getParam("htmlUrl");
-const uid     = getParam("uid");
-console.log("Iniciando editor:", { htmlUrl, uid });
+const root    = document.getElementById("editor-root");
 
-const root = document.getElementById("editor-root");
-ReactDOM.createRoot
-  ? ReactDOM.createRoot(root).render(
-      React.createElement(EditorMVP, { htmlUrl, uid })
-    )
-  : ReactDOM.render(
-      React.createElement(EditorMVP, { htmlUrl, uid }),
+onAuthStateChanged(auth, user => {
+  if (!user) {
+    console.warn("No autenticado, redirigiendo al login.");
+    return window.location.href = "/";
+  }
+  const uid = user.uid;
+  console.log("Usuario autenticado:", uid);
+
+  // Renderizar EditorMVP
+  const props = { htmlUrl, uid };
+  if (ReactDOM.createRoot) {
+    ReactDOM.createRoot(root).render(
+      React.createElement(EditorMVP, props)
+    );
+  } else {
+    ReactDOM.render(
+      React.createElement(EditorMVP, props),
       root
     );
+  }
+});
