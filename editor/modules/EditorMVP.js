@@ -6,6 +6,8 @@ import { loadEdits }                     from "./firestore.js";
 import { onChangeText }                  from "./textEditor.js";
 import { onChangeImage }                 from "./imageEditor.js";
 import { onChangeLink }                  from "./linkEditor.js";
+import { onChangeRichText } from "./richTextEditor.js";
+
 
 export function EditorMVP({ htmlUrl, uid }) {
   const containerRef = useRef(null);
