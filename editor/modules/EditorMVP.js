@@ -3,16 +3,14 @@ import React, { useState, useEffect, useRef } from "https://esm.sh/react@18.2.0"
 import ReactDOM                          from "https://esm.sh/react-dom@18.2.0";
 import { getParam }                      from "./utils.js";
 import { loadEdits }                     from "./firestore.js";
-import { onChangeText }                  from "./textEditor.js";
+import { onChangeRichText }              from "./richTextEditor.js";
 import { onChangeImage }                 from "./imageEditor.js";
 import { onChangeLink }                  from "./linkEditor.js";
-import { onChangeRichText } from "./richTextEditor.js";
-
 
 export function EditorMVP({ htmlUrl, uid }) {
   const containerRef = useRef(null);
-  const [html, setHtml]     = useState("");
-  const [edits, setEdits]   = useState({});
+  const [html, setHtml]       = useState("");
+  const [edits, setEdits]     = useState({});
   const [ctxMenu, setCtxMenu] = useState({
     show: false, x: 0, y: 0, type: null, target: null
   });
@@ -23,7 +21,7 @@ export function EditorMVP({ htmlUrl, uid }) {
     loadEdits(uid).then(setEdits).catch(console.error);
   }, [uid]);
 
-  // 2) Fetch + clonación de <head>
+  // 2) Fetch + clonación del <head>
   useEffect(() => {
     if (!htmlUrl) {
       console.error("❌ Falta htmlUrl");
@@ -46,7 +44,7 @@ export function EditorMVP({ htmlUrl, uid }) {
           document.head.appendChild(m.cloneNode(true));
         });
 
-        // C) Clonar todo <link href=…>
+        // C) Clonar todo <link href=...>
         doc.head.querySelectorAll("link[href]").forEach(link => {
           const nl = link.cloneNode();
           if (!nl.href.startsWith("http")) {
@@ -66,19 +64,20 @@ export function EditorMVP({ htmlUrl, uid }) {
       .catch(err => console.error("❌ Fetch error:", err));
   }, [htmlUrl]);
 
-  // 3) Inyectar HTML + aplicar edits
+  // 3) Inyectar HTML + aplicar ediciones
   useEffect(() => {
     if (!html) return;
     const root = containerRef.current;
     root.innerHTML = html;
 
     // aplicar ediciones previas
-    Object.entries(edits).forEach(([sel, ch]) => {
+    Object.entries(edits).forEach(([sel, changes]) => {
       const el = root.querySelector(sel);
       if (!el) return;
-      if (ch.text) el.innerText = ch.text;
-      if (ch.href) el.href      = ch.href;
-      if (ch.src)  el.src       = ch.src;
+      if (changes.html) el.innerHTML = changes.html;
+      else if (changes.text) el.innerText = changes.text;
+      if (changes.href) el.href = changes.href;
+      if (changes.src)  el.src  = changes.src;
     });
 
     // marcar editables
@@ -131,14 +130,25 @@ export function EditorMVP({ htmlUrl, uid }) {
         "div",
         { className: "ctx-menu", style: { left: ctxMenu.x, top: ctxMenu.y } },
         ctxMenu.type === "text" &&
-          React.createElement("button", { onClick: () => onChangeText(ctxMenu, uid, hideMenu) }, "Cambiar texto"),
+          React.createElement(
+            "button",
+            { onClick: () => onChangeRichText(ctxMenu, uid, hideMenu) },
+            "Editar texto"
+          ),
         ctxMenu.type === "image" &&
-          React.createElement("button", { onClick: () => onChangeImage(ctxMenu, uid, hideMenu) }, "Cambiar imagen"),
+          React.createElement(
+            "button",
+            { onClick: () => onChangeImage(ctxMenu, uid, hideMenu) },
+            "Cambiar imagen"
+          ),
         ctxMenu.type === "link" &&
-          React.createElement("button", { onClick: () => onChangeLink(ctxMenu, uid, hideMenu) }, "Cambiar link")
+          React.createElement(
+            "button",
+            { onClick: () => onChangeLink(ctxMenu, uid, hideMenu) },
+            "Cambiar link"
+          )
       ),
       document.body
     )
   );
 }
-
