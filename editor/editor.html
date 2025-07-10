@@ -10,7 +10,6 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
   <style>
-    /* menú contextual */
     .ctx-menu {
       position: absolute;
       transform: translate(-50%, -100%);
@@ -45,13 +44,12 @@
     const ReactDOM  = window.ReactDOM;
     const { useState, useEffect, useRef } = React;
 
-    // Helper: leer un parámetro
+    // Helper: leer un parámetro de la query
     function getParam(name) {
       const v = new URLSearchParams(window.location.search).get(name);
       return v ? decodeURIComponent(v) : '';
     }
 
-    // EditorMVP en JS puro
     function EditorMVP({ htmlUrl, uid }) {
       const containerRef = useRef(null);
       const [editedHtml, setEditedHtml] = useState('');
@@ -59,51 +57,64 @@
         show:false, x:0, y:0, type:null, target:null
       });
 
-      // 1) Fetch y parseo de la landing
+      // 1) Fetch y parseo de la landing remota
       useEffect(() => {
         if (!htmlUrl) {
-          console.error("❌ No se proporcionó htmlUrl en la query.");
+          console.error("❌ Falta htmlUrl en la query.");
           return;
         }
         console.log("📥 Fetch de", htmlUrl);
         fetch(htmlUrl)
           .then(res => res.text())
           .then(text => {
-            // Parseamos el HTML para extraer <head> y <body>
             const parser = new DOMParser();
             const doc    = parser.parseFromString(text, 'text/html');
-            // 1a) Importamos estilos del <head>
-            doc.head.querySelectorAll('link[rel="stylesheet"], style').forEach(el => {
-              document.head.appendChild(el.cloneNode(true));
+            const origin = new URL(htmlUrl).origin;
+
+            // A) Insertar <base> para rutas relativas
+            const baseEl = document.createElement('base');
+            baseEl.href  = origin + '/';
+            document.head.insertBefore(baseEl, document.head.firstChild);
+
+            // B) Clonar <link rel="stylesheet"> con href absoluto
+            doc.head.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
+              const href    = new URL(link.getAttribute('href'), origin).href;
+              const newLink = document.createElement('link');
+              newLink.rel   = 'stylesheet';
+              newLink.href  = href;
+              document.head.appendChild(newLink);
             });
-            // 1b) Inyectamos sólo el <body>
+
+            // C) Clonar estilos inline
+            doc.head.querySelectorAll('style').forEach(style => {
+              document.head.appendChild(style.cloneNode(true));
+            });
+
+            // D) Guardar el <body> para inyectar luego
             setEditedHtml(doc.body.innerHTML);
           })
           .catch(err => console.error("❌ Fetch error:", err));
       }, [htmlUrl]);
 
-      // 2) Inyectar atributos data-editable
+      // 2) Inyectar el HTML y marcar editables
       useEffect(() => {
         if (!editedHtml) return;
         const root = containerRef.current;
-        // Volcamos el HTML
         root.innerHTML = editedHtml;
-        // Marcar texto
+
         root.querySelectorAll('h1,h2,h3,p,span').forEach(el => {
           el.dataset.editableType = 'text';
           el.contentEditable = false;
         });
-        // Marcar imágenes
         root.querySelectorAll('img').forEach(el => {
           el.dataset.editableType = 'image';
         });
-        // Marcar enlaces
         root.querySelectorAll('a').forEach(el => {
           el.dataset.editableType = 'link';
         });
       }, [editedHtml]);
 
-      // 3) Capturar click/tap para menú
+      // 3) Capturar clicks/taps y mostrar menú contextual
       useEffect(() => {
         const handler = e => {
           const el = e.target.closest('[data-editable-type]');
@@ -130,13 +141,13 @@
         el.onblur = () => {
           el.contentEditable = false;
           setCtxMenu({ show:false });
-          console.log("✏️ Texto:", el.innerText);
+          console.log("✏️ Texto editable:", el.innerText);
         };
       }
       function onChangeImage() {
         const el = ctxMenu.target;
         const inp = document.createElement('input');
-        inp.type = 'file'; inp.accept='image/*';
+        inp.type = 'file'; inp.accept = 'image/*';
         inp.onchange = () => {
           const file = inp.files[0];
           if (!file) return setCtxMenu({ show:false });
@@ -164,12 +175,11 @@
       return React.createElement(
         React.Fragment,
         null,
-        React.createElement('div',{ref:containerRef}),
+        React.createElement('div', { ref: containerRef }),
         ctxMenu.show && ReactDOM.createPortal(
-          React.createElement('div',{
-            className:'ctx-menu',
-            style:{left:ctxMenu.x, top:ctxMenu.y}
-          },
+          React.createElement(
+            'div',
+            { className:'ctx-menu', style:{ left:ctxMenu.x, top:ctxMenu.y } },
             ctxMenu.type==='text'  && React.createElement('button',{onClick:onChangeText},  'Cambiar texto'),
             ctxMenu.type==='image' && React.createElement('button',{onClick:onChangeImage}, 'Cambiar imagen'),
             ctxMenu.type==='link'  && React.createElement('button',{onClick:onChangeLink},  'Cambiar link')
@@ -182,13 +192,19 @@
     // Montaje final
     const htmlUrl = getParam('htmlUrl');
     const uid     = getParam('uid');
-    console.log("🚀 Lanzando EditorMVP", {htmlUrl, uid});
+    console.log("🚀 Lanzando EditorMVP", { htmlUrl, uid });
 
     const root = document.getElementById('editor-root');
-    ReactDOM.createRoot
-      ? ReactDOM.createRoot(root).render(React.createElement(EditorMVP,{htmlUrl,uid}))
-      : ReactDOM.render(React.createElement(EditorMVP,{htmlUrl,uid}), root);
-
+    if (ReactDOM.createRoot) {
+      ReactDOM.createRoot(root).render(
+        React.createElement(EditorMVP,{ htmlUrl, uid })
+      );
+    } else {
+      ReactDOM.render(
+        React.createElement(EditorMVP,{ htmlUrl, uid }),
+        root
+      );
+    }
   })();
   </script>
 </body>
