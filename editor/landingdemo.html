@@ -137,18 +137,25 @@
 
       // 5) Render
       return (
-        <>
-          <div ref={containerRef} dangerouslySetInnerHTML={{ __html: html }} />
-          {ctxMenu.show && ReactDOM.createPortal(
-            <div className="ctx-menu" style={{ left:ctxMenu.x, top:ctxMenu.y }}>
-              {ctxMenu.type==='text'  && <button onClick={onChangeText}>Cambiar texto</button>}
-              {ctxMenu.type==='image' && <button onClick={onChangeImage}>Cambiar imagen</button>}
-              {ctxMenu.type==='link'  && <button onClick={onChangeLink}>Cambiar link</button>}
-            </div>,
-            document.body
-          )}
-        </>
-      );
+  React.createElement(React.Fragment, null,
+    React.createElement("div", {
+      ref: containerRef,
+      dangerouslySetInnerHTML: { __html: html }
+    }),
+    ctxMenu.show && ReactDOM.createPortal(
+      React.createElement("div", {
+        className: "ctx-menu",
+        style: { left: ctxMenu.x, top: ctxMenu.y }
+      },
+        ctxMenu.type === 'text'  && React.createElement("button", { onClick: onChangeText }, "Cambiar texto"),
+        ctxMenu.type === 'image' && React.createElement("button", { onClick: onChangeImage }, "Cambiar imagen"),
+        ctxMenu.type === 'link'  && React.createElement("button", { onClick: onChangeLink }, "Cambiar link")
+      ),
+      document.body
+    )
+  )
+);
+
     }
 
     // Montaje
