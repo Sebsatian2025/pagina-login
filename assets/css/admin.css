@@ -16,3 +16,36 @@
   font-size: 14px;
   padding: 2px 6px;
 }
+
+.rich-toolbar {
+  position: absolute;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  z-index: 10001;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.rich-toolbar button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.rich-toolbar button:hover {
+  background: rgba(0,0,0,0.05);
+}
+
+.rich-toolbar input[type="color"] {
+  cursor: pointer;
+}
