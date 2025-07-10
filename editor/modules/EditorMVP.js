@@ -83,7 +83,6 @@ export function EditorMVP({ htmlUrl, uid }) {
     // marcar editables
     root.querySelectorAll("h1,h2,h3,p,span").forEach(el => {
       el.dataset.editableType = "text";
-      el.contentEditable      = false;
     });
     root.querySelectorAll("img").forEach(el => {
       el.dataset.editableType = "image";
