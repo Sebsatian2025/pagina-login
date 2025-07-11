@@ -1,4 +1,3 @@
-// public/editor/modules/EditorMVP.js
 import React, { useState, useEffect, useRef } from "https://esm.sh/react@18.2.0";
 import ReactDOM                                from "https://esm.sh/react-dom@18.2.0";
 
@@ -12,7 +11,7 @@ import { getSelector }      from "./utils.js";
 
 export function EditorMVP({ htmlUrl, uid }) {
   const containerRef = useRef(null);
-  const sizesRef     = useRef(new Map()); 
+  const sizesRef     = useRef(new Map());
   const pageId       = encodeURIComponent(htmlUrl);
 
   const [html, setHtml]   = useState("");
@@ -27,36 +26,36 @@ export function EditorMVP({ htmlUrl, uid }) {
     loadEdits(uid, pageId).then(setEdits).catch(console.error);
   }, [uid, pageId]);
 
-  // 2) Fetch HTML + <head> + admin.css
+  // 2) Fetch HTML + head + admin.css
   useEffect(() => {
     if (!htmlUrl) return;
-    fetch(htmlUrl)
-      .then(r => r.text())
-      .then(text => {
-        const parser = new DOMParser();
-        const doc    = parser.parseFromString(text, "text/html");
-        const origin = new URL(htmlUrl).origin;
+    fetch(htmlUrl).then(r => r.text()).then(text => {
+      const parser = new DOMParser();
+      const doc    = parser.parseFromString(text, "text/html");
+      const origin = new URL(htmlUrl).origin;
 
-        const base = document.createElement("base");
-        base.href  = origin + "/";
-        document.head.insertBefore(base, document.head.firstChild);
+      // Inyecta <base>
+      const base = document.createElement("base");
+      base.href  = origin + "/";
+      document.head.insertBefore(base, document.head.firstChild);
 
-        doc.head.querySelectorAll("meta, link[href], style").forEach(n => {
-          const c = n.cloneNode(true);
-          if (c.tagName === "LINK" && !c.href.startsWith("http")) {
-            c.href = new URL(n.getAttribute("href"), origin).href;
-          }
-          document.head.appendChild(c);
-        });
+      // Clona meta, link, style
+      doc.head.querySelectorAll("meta, link[href], style").forEach(n => {
+        const c = n.cloneNode(true);
+        if (c.tagName === "LINK" && !c.href.startsWith("http")) {
+          c.href = new URL(n.getAttribute("href"), origin).href;
+        }
+        document.head.appendChild(c);
+      });
 
-        const css = document.createElement("link");
-        css.rel  = "stylesheet";
-        css.href = `${window.location.origin}/assets/css/admin.css`;
-        document.head.appendChild(css);
+      // Inyecta admin.css
+      const css = document.createElement("link");
+      css.rel  = "stylesheet";
+      css.href = `${window.location.origin}/assets/css/admin.css`;
+      document.head.appendChild(css);
 
-        setHtml(doc.body.innerHTML);
-      })
-      .catch(console.error);
+      setHtml(doc.body.innerHTML);
+    }).catch(console.error);
   }, [htmlUrl]);
 
   // 3) Render + aplica ediciones + marca tipos + captura tamaños
@@ -65,7 +64,7 @@ export function EditorMVP({ htmlUrl, uid }) {
     const root = containerRef.current;
     root.innerHTML = html;
 
-    // Aplica guardados
+    // Aplica ediciones guardadas
     Object.entries(edits).forEach(([sel, ch]) => {
       const el = root.querySelector(sel);
       if (!el) return;
@@ -88,18 +87,18 @@ export function EditorMVP({ htmlUrl, uid }) {
       el.removeAttribute("data-editable-types");
       const types = [];
 
-      // Texto (incluye <a>)
+      // TEXTO
       if (["H1","H2","H3","P","SPAN","DIV","A"].includes(el.tagName) &&
           el.textContent.trim()) {
         types.push("text");
       }
 
-      // Link
+      // LINK
       if (el.tagName === "A") {
         types.push("link");
       }
 
-      // Imagen normal
+      // IMAGEN
       if (el.tagName === "IMG") {
         types.push("image");
         el.style.cursor = "pointer";
@@ -111,20 +110,11 @@ export function EditorMVP({ htmlUrl, uid }) {
         icon.className = "img-edit-icon";
         icon.innerText = "✎";
         Object.assign(icon.style, {
-          position:   "absolute",
-          top:        "8px",
-          right:      "8px",
-          background: "var(--bs-primary)",
-          color:      "#fff",
-          borderRadius: "50%",
-          width:      "24px",
-          height:     "24px",
-          lineHeight: "24px",
-          textAlign:  "center",
-          fontSize:   "14px",
-          cursor:     "pointer",
-          display:    "none",
-          zIndex:     "1001"
+          position: "absolute", top: "8px", right: "8px",
+          background: "var(--bs-primary)", color: "#fff",
+          borderRadius: "50%", width: "24px", height: "24px",
+          lineHeight: "24px", textAlign: "center", fontSize: "14px",
+          cursor: "pointer", display: "none", zIndex: "1001"
         });
         parent.appendChild(icon);
         parent.addEventListener("mouseenter", () => icon.style.display = "block");
@@ -137,13 +127,13 @@ export function EditorMVP({ htmlUrl, uid }) {
         });
       }
 
-      // Fondo imagen
+      // FONDO IMAGEN
       const bgImg = getComputedStyle(el).backgroundImage;
       if (bgImg.startsWith("url(") && bgImg !== "none") {
         types.push("bgImage");
       }
 
-      // Fondo color
+      // FONDO COLOR
       const bgColor = getComputedStyle(el).backgroundColor;
       if (
         bgColor &&
@@ -160,20 +150,11 @@ export function EditorMVP({ htmlUrl, uid }) {
         colorIcon.className = "bgcolor-edit-icon";
         colorIcon.innerText = "🎨";
         Object.assign(colorIcon.style, {
-          position:   "absolute",
-          top:        "8px",
-          left:       "8px",
-          background: "var(--bs-success)",
-          color:      "#fff",
-          borderRadius: "50%",
-          width:      "24px",
-          height:     "24px",
-          lineHeight: "24px",
-          textAlign:  "center",
-          fontSize:   "14px",
-          cursor:     "pointer",
-          display:    "none",
-          zIndex:     "1001"
+          position: "absolute", top: "8px", left: "8px",
+          background: "var(--bs-success)", color: "#fff",
+          borderRadius: "50%", width: "24px", height: "24px",
+          lineHeight: "24px", textAlign: "center", fontSize: "14px",
+          cursor: "pointer", display: "none", zIndex: "1001"
         });
         parent.appendChild(colorIcon);
         parent.addEventListener("mouseenter", () => colorIcon.style.display = "block");
@@ -186,7 +167,7 @@ export function EditorMVP({ htmlUrl, uid }) {
         });
       }
 
-      // Captura líneas máximas para texto
+      // CÁLCULO DE MAX LÍNEAS
       if (types.includes("text")) {
         const sel   = getSelector(el);
         const style = getComputedStyle(el);
@@ -194,7 +175,9 @@ export function EditorMVP({ htmlUrl, uid }) {
                       ? parseFloat(style.maxHeight)
                       : el.getBoundingClientRect().height;
         const lh    = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.2;
-        const maxLines = Math.max(1, Math.floor(maxH / lh));
+        const rawLines = Math.floor(maxH / lh);
+        // nunca menos de 10 líneas
+        const maxLines = Math.max(10, rawLines);
         sizesRef.current.set(sel, { maxLines, lineHeight: lh });
       }
 
@@ -204,7 +187,7 @@ export function EditorMVP({ htmlUrl, uid }) {
     });
   }, [html, edits, uid, pageId]);
 
-  // 4) Menú contextual
+  // 4) Global click → menú context
   useEffect(() => {
     const handler = e => {
       if (e.target.closest(".ctx-menu")) return;
@@ -216,7 +199,13 @@ export function EditorMVP({ htmlUrl, uid }) {
       e.preventDefault();
       const rect  = el.getBoundingClientRect();
       const types = el.dataset.editableTypes.split("|");
-      setCtxMenu({ show: true, x: rect.left + rect.width/2, y: rect.top - 8, types, target: el });
+      setCtxMenu({
+        show:   true,
+        x:      rect.left + rect.width / 2,
+        y:      rect.top - 8,
+        types,
+        target: el
+      });
     };
     document.addEventListener("click", handler, true);
     return () => document.removeEventListener("click", handler, true);
@@ -231,26 +220,32 @@ export function EditorMVP({ htmlUrl, uid }) {
     ctxMenu.show && ReactDOM.createPortal(
       React.createElement(
         "div",
-        { className: "ctx-menu", style: { position:"fixed", left:ctxMenu.x, top:ctxMenu.y } },
+        {
+          className: "ctx-menu",
+          style:     { position: "fixed", left: ctxMenu.x, top: ctxMenu.y }
+        },
         ctxMenu.types.includes("text") &&
-          React.createElement("button", { onClick: () =>
-            onChangeRichText(ctxMenu, uid, pageId, hideMenu, sizesRef.current)
+          React.createElement("button", {
+            onClick: () =>
+              onChangeRichText(
+                ctxMenu, uid, pageId, hideMenu, sizesRef.current
+              )
           }, "Editar texto"),
         ctxMenu.types.includes("link") &&
-          React.createElement("button", { onClick: () =>
-            onChangeLink(ctxMenu, uid, pageId, hideMenu)
+          React.createElement("button", {
+            onClick: () => onChangeLink(ctxMenu, uid, pageId, hideMenu)
           }, "Editar link"),
         ctxMenu.types.includes("image") &&
-          React.createElement("button", { onClick: () =>
-            onChangeImage(ctxMenu, uid, pageId, hideMenu)
+          React.createElement("button", {
+            onClick: () => onChangeImage(ctxMenu, uid, pageId, hideMenu)
           }, "Editar imagen"),
         ctxMenu.types.includes("bgImage") &&
-          React.createElement("button", { onClick: () =>
-            onChangeBgImage(ctxMenu, uid, pageId, hideMenu)
+          React.createElement("button", {
+            onClick: () => onChangeBgImage(ctxMenu, uid, pageId, hideMenu)
           }, "Editar fondo"),
         ctxMenu.types.includes("bgColor") &&
-          React.createElement("button", { onClick: () =>
-            onChangeBgColor(ctxMenu, uid, pageId, hideMenu)
+          React.createElement("button", {
+            onClick: () => onChangeBgColor(ctxMenu, uid, pageId, hideMenu)
           }, "Editar color")
       ),
       document.body
