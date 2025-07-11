@@ -1,4 +1,3 @@
-// public/editor/modules/richTextEditor.js
 import { saveEdit }    from "./firestore.js";
 import { getSelector } from "./utils.js";
 
@@ -7,57 +6,41 @@ function injectOverrides() {
   if (injected) return;
   injected = true;
   const style = document.createElement("style");
-  style.id = "richTextEditorOverrides";
   style.textContent = `
-    .rich-toolbar {
-      background: rgba(0,0,0,0.85) !important;
-      color:      #fff              !important;
-    }
-    .rich-toolbar button {
-      background: none    !important;
-      border:     none    !important;
-      color:      #fff    !important;
-      cursor:     pointer !important;
-      padding:    4px     !important;
-      font-size:  14px    !important;
-    }
-    .rich-toolbar input[type=color] {
-      width:       24px !important;
-      height:      24px !important;
-      border:      none !important;
-      padding:     0    !important;
-      margin-left: 4px  !important;
-      cursor:      pointer !important;
-    }
+    .rich-toolbar { background: rgba(0,0,0,0.85) !important; color: #fff !important; }
+    .rich-toolbar button { background: none !important; border: none !important; color: #fff !important; cursor: pointer; padding: 4px; }
+    .rich-toolbar input[type=color] { width:24px;height:24px;border:none;padding:0;margin-left:4px;cursor:pointer; }
   `;
   document.head.appendChild(style);
 }
 
-export function onChangeRichText(ctxMenu, uid, pageId, hideMenu) {
+/**
+ * sizesMap: Map<selector, { maxLines: number, lineHeight: number }>
+ */
+export function onChangeRichText(
+  ctxMenu, uid, pageId, hideMenu, sizesMap
+) {
   injectOverrides();
 
   const el = ctxMenu.target;
+  const prevHtml = el.innerHTML;    // Guardamos valor previo
   el.contentEditable = true;
   el.focus();
 
   const menuEl = document.querySelector(".ctx-menu");
   if (!menuEl) return;
 
-  const prevTb = menuEl.querySelector(".rich-toolbar");
-  if (prevTb) prevTb.remove();
+  // Elimina toolbar anterior si existiera
+  const oldTb = menuEl.querySelector(".rich-toolbar");
+  if (oldTb) oldTb.remove();
 
+  // Construye el toolbar
   const tb = document.createElement("div");
   tb.className = "rich-toolbar";
   Object.assign(tb.style, {
-    position:      "absolute",
-    bottom:        "100%",
-    left:          "50%",
-    transform:     "translateX(-50%) translateY(-8px)",
-    display:       "flex",
-    gap:           "6px",
-    padding:       "6px 8px",
-    borderRadius:  "4px",
-    zIndex:        "1001"
+    position: "absolute", bottom: "100%", left: "50%",
+    transform: "translateX(-50%) translateY(-8px)",
+    display: "flex", gap: "6px", padding: "6px 8px", borderRadius: "4px", zIndex: 1001
   });
   tb.addEventListener("mousedown", e => e.preventDefault());
 
@@ -71,20 +54,16 @@ export function onChangeRichText(ctxMenu, uid, pageId, hideMenu) {
     });
     return b;
   };
-
-  tb.appendChild(makeBtn("bold", "<b>B</b>"));
-  tb.appendChild(makeBtn("italic", "<i>I</i>"));
-  tb.appendChild(makeBtn("underline", "<u>U</u>"));
-  tb.appendChild(makeBtn("strikeThrough", "<s>S</s>"));
-
-  const inputColor = document.createElement("input");
-  inputColor.type        = "color";
-  inputColor.dataset.cmd = "foreColor";
-  inputColor.addEventListener("input", e => {
+  tb.append(makeBtn("bold","<b>B</b>"), makeBtn("italic","<i>I</i>"),
+            makeBtn("underline","<u>U</u>"), makeBtn("strikeThrough","<s>S</s>"));
+  const colorInput = document.createElement("input");
+  colorInput.type        = "color";
+  colorInput.dataset.cmd = "foreColor";
+  colorInput.addEventListener("input", e => {
     document.execCommand("foreColor", false, e.target.value);
   });
-  inputColor.addEventListener("mousedown", e => e.preventDefault());
-  tb.appendChild(inputColor);
+  colorInput.addEventListener("mousedown", e => e.preventDefault());
+  tb.appendChild(colorInput);
 
   menuEl.appendChild(tb);
 
@@ -94,12 +73,27 @@ export function onChangeRichText(ctxMenu, uid, pageId, hideMenu) {
     tb.remove();
 
     const selector = getSelector(el);
-    const htmlVal   = el.innerHTML;
+    const newHtml  = el.innerHTML;
+
+    // Validación de líneas
+    const cfg = sizesMap.get(selector);
+    if (cfg) {
+      const newHeight = el.getBoundingClientRect().height;
+      const newLines  = Math.round(newHeight / cfg.lineHeight);
+      if (newLines > cfg.maxLines) {
+        alert(`Tu texto ocupa ${newLines} líneas (máx ${cfg.maxLines}). Recorta el contenido.`);
+        el.innerHTML = prevHtml;
+        return;
+      }
+    }
+
+    // Guardar si cabe
     try {
-      await saveEdit(uid, pageId, selector, "html", htmlVal);
+      await saveEdit(uid, pageId, selector, "html", newHtml);
       console.log("✔️ Texto guardado:", selector);
     } catch(err) {
-      console.error("❌ Error guardando texto:", err);
+      console.error("❌ Error guardando:", err);
+      el.innerHTML = prevHtml;
     }
   };
 }
