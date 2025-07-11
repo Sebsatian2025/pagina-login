@@ -120,4 +120,26 @@
   border:        none    !important;
   margin-left:   4px     !important;
 }
+
+/* public/assets/css/admin.css */
+
+/* Resaltado sutil de textos editables */
+[data-editable-types~="text"] {
+  position: relative;
+  cursor: pointer;
+  transition: background-color .2s, text-decoration .2s;
+}
+
+[data-editable-types~="text"]:hover {
+  background-color: rgba(13, 110, 253, 0.1);
+  text-decoration: underline dotted rgba(13, 110, 253, 0.5);
+}
+
+/* Evita selección accidental de los iconos */
+.img-edit-icon,
+.bgimage-edit-icon,
+.bgcolor-edit-icon {
+  user-select: none;
+}
+
 ```
