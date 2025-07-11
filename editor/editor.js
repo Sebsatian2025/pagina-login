@@ -1,4 +1,8 @@
 // public/editor/editor.js
+
+// 0) Debug: verifica que el script se cargue realmente
+console.log("🚀 editor.js cargado desde:", window.location.pathname);
+
 import React from "https://esm.sh/react@18.2.0";
 import ReactDOM from "https://esm.sh/react-dom@18.2.0";
 import { initAuth, onUserReady } from "./modules/auth.js";
@@ -17,25 +21,38 @@ const firebaseConfig = {
 };
 
 // 2) Inicializa Auth y Firestore internamente
+console.log("🔑 Inicializando Auth");
 const auth = initAuth(firebaseConfig);
 
 // 3) Lee htmlUrl de la query string
 const htmlUrl = getParam("htmlUrl");
+console.log("🔗 htmlUrl:", htmlUrl);
 
 // 4) Punto de montaje React
 const root = document.getElementById("editor-root");
+console.log("🎯 Punto de montaje React:", root);
 
 // 5) Espera a que el usuario esté autenticado
 onUserReady(auth, user => {
+  console.log("🔔 onUserReady callback, user:", user);
   if (!user) {
     console.warn("No autenticado, redirigiendo al login.");
-    return window.location.href = "/";
+    window.location.href = "/";
+    return;
   }
+
   const uid = user.uid;
   console.log("✅ Usuario autenticado:", uid);
 
+  if (!root) {
+    console.error("❌ No se encontró #editor-root en el DOM");
+    return;
+  }
+
   // Monta el componente EditorMVP con React
   const props = { htmlUrl, uid };
+  console.log("🏗️ Montando EditorMVP con props:", props);
+
   if (ReactDOM.createRoot) {
     ReactDOM.createRoot(root).render(
       React.createElement(EditorMVP, props)
