@@ -15,7 +15,7 @@ export function EditorMVP({ htmlUrl, uid }) {
     show: false, x: 0, y: 0, type: null, target: null
   });
 
-  const ADMIN_HOST = "https://glittering-druid-2d68b7.netlify.app";
+  const ADMIN_HOST = window.location.origin;
 
   // 1) Cargar ediciones previas
   useEffect(() => {
@@ -60,7 +60,7 @@ export function EditorMVP({ htmlUrl, uid }) {
           document.head.appendChild(s.cloneNode(true));
         });
 
-        // E) Inyectar admin.css desde tu propio dominio
+        // E) Inyectar admin.css desde origen dinámico
         const adminCss = document.createElement("link");
         adminCss.rel  = "stylesheet";
         adminCss.href = `${ADMIN_HOST}/assets/css/admin.css`;
