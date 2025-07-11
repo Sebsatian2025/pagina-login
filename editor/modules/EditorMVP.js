@@ -58,7 +58,13 @@ export function EditorMVP({ htmlUrl, uid }) {
           document.head.appendChild(s.cloneNode(true));
         });
 
-        // E) Guardar <body>
+        // E) Inyectar admin.css al final para override
+        const adminCss = document.createElement("link");
+        adminCss.rel  = "stylesheet";
+        adminCss.href = "../assets/css/admin.css";
+        document.head.appendChild(adminCss);
+
+        // F) Guardar <body>
         setHtml(doc.body.innerHTML);
       })
       .catch(err => console.error("❌ Fetch error:", err));
@@ -70,7 +76,6 @@ export function EditorMVP({ htmlUrl, uid }) {
     const root = containerRef.current;
     root.innerHTML = html;
 
-    // aplicar ediciones previas
     Object.entries(edits).forEach(([sel, changes]) => {
       const el = root.querySelector(sel);
       if (!el) return;
@@ -80,7 +85,6 @@ export function EditorMVP({ htmlUrl, uid }) {
       if (changes.src)  el.src  = changes.src;
     });
 
-    // marcar editables
     root.querySelectorAll("h1,h2,h3,p,span").forEach(el => {
       el.dataset.editableType = "text";
     });
@@ -114,12 +118,10 @@ export function EditorMVP({ htmlUrl, uid }) {
     return () => document.removeEventListener("click", handler, true);
   }, []);
 
-  // helper para ocultar menú
   function hideMenu() {
     setCtxMenu(c => ({ ...c, show: false }));
   }
 
-  // 5) Render
   return React.createElement(
     React.Fragment,
     null,
