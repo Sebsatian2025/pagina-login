@@ -20,6 +20,13 @@ export function EditorMVP({ htmlUrl, uid }) {
     show: false, x: 0, y: 0, type: null, target: null
   });
 
+  // Debug: cada vez que ctxMenu cambie, muestra su estado
+  useEffect(() => {
+    if (ctxMenu.show) {
+      console.log("📌 ctxMenu está visible:", ctxMenu);
+    }
+  }, [ctxMenu]);
+
   const ADMIN_HOST = window.location.origin;
 
   // 1) Cargar ediciones previas
@@ -106,17 +113,23 @@ export function EditorMVP({ htmlUrl, uid }) {
   // 4) Menú contextual
   useEffect(() => {
     const handler = e => {
+      console.log("🔍 Click global:", e.target);
       const el = e.target.closest("[data-editable-type]");
       if (!el) {
+        console.log("❌ Click fuera de editable, ocultando ctxMenu");
         setCtxMenu(c => ({ ...c, show: false }));
         return;
       }
+      console.log("✅ Elemento editable detectado:", el, "tipo:", el.dataset.editableType);
       e.preventDefault();
       const r = el.getBoundingClientRect();
+      const newX = r.left + r.width / 2;
+      const newY = r.top - 8;
+      console.log(`📍 Setting ctxMenu coords: x=${newX}, y=${newY}`);
       setCtxMenu({
         show:   true,
-        x:      r.left + r.width/2,
-        y:      r.top - 8,
+        x:      newX,
+        y:      newY,
         type:   el.dataset.editableType,
         target: el
       });
@@ -152,13 +165,19 @@ export function EditorMVP({ htmlUrl, uid }) {
         ctxMenu.type === "image" &&
           React.createElement(
             "button",
-            { onClick: () => onChangeImage(ctxMenu, uid, hideMenu) },
+            { onClick: () => {
+                console.log("🧪 Click en botón CAMBIAR IMAGEN");
+                onChangeImage(ctxMenu, uid, hideMenu);
+              } },
             "Cambiar imagen"
           ),
         ctxMenu.type === "link" &&
           React.createElement(
             "button",
-            { onClick: () => onChangeLink(ctxMenu, uid, hideMenu) },
+            { onClick: () => {
+                console.log("🧪 Click en botón CAMBIAR LINK");
+                onChangeLink(ctxMenu, uid, hideMenu);
+              } },
             "Cambiar link"
           )
       ),
