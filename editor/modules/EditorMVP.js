@@ -16,13 +16,13 @@ export function EditorMVP({ htmlUrl, uid }) {
 
   const ADMIN_HOST = window.location.origin;
 
-  // 1) Cargar ediciones previas
+  // 1) Carga ediciones previas
   useEffect(() => {
     if (!uid) return;
     loadEdits(uid).then(setEdits).catch(console.error);
   }, [uid]);
 
-  // 2) Fetch + clonación del <head>
+  // 2) Fetch + clonación de <head>
   useEffect(() => {
     if (!htmlUrl) {
       console.error("❌ Falta htmlUrl");
@@ -40,32 +40,21 @@ export function EditorMVP({ htmlUrl, uid }) {
         baseEl.href  = origin + "/";
         document.head.insertBefore(baseEl, document.head.firstChild);
 
-        // B) Clonar <meta>
-        doc.head.querySelectorAll("meta").forEach(m => {
-          document.head.appendChild(m.cloneNode(true));
-        });
-
-        // C) Clonar <link href=...>
-        doc.head.querySelectorAll("link[href]").forEach(link => {
-          const nl = link.cloneNode();
-          if (!nl.href.startsWith("http")) {
-            nl.href = new URL(link.getAttribute("href"), origin).href;
+        // B) Clonar <meta>, <link>, <style>
+        doc.head.querySelectorAll("meta, link[href], style").forEach(n => {
+          const clone = n.cloneNode(true);
+          if (clone.tagName === "LINK" && !clone.href.startsWith("http")) {
+            clone.href = new URL(clone.getAttribute("href"), origin).href;
           }
-          document.head.appendChild(nl);
+          document.head.appendChild(clone);
         });
 
-        // D) Clonar <style>
-        doc.head.querySelectorAll("style").forEach(s => {
-          document.head.appendChild(s.cloneNode(true));
-        });
-
-        // E) Inyectar admin.css
+        // C) Inyectar admin.css
         const adminCss = document.createElement("link");
         adminCss.rel  = "stylesheet";
         adminCss.href = `${ADMIN_HOST}/assets/css/admin.css`;
         document.head.appendChild(adminCss);
 
-        // F) Guardar <body>
         setHtml(doc.body.innerHTML);
       })
       .catch(err => console.error("❌ Fetch error:", err));
@@ -81,11 +70,12 @@ export function EditorMVP({ htmlUrl, uid }) {
       const el = root.querySelector(sel);
       if (!el) return;
       if (changes.html) el.innerHTML = changes.html;
-      else if (changes.text) el.innerText = changes.text;
-      if (changes.href) el.href = changes.href;
-      if (changes.src)  el.src  = changes.src;
+      if (changes.text) el.innerText  = changes.text;
+      if (changes.href) el.href        = changes.href;
+      if (changes.src)  el.src         = changes.src;
     });
 
+    // marcar tipos editables
     root.querySelectorAll("h1,h2,h3,p,span").forEach(el => {
       el.dataset.editableType = "text";
     });
@@ -97,10 +87,10 @@ export function EditorMVP({ htmlUrl, uid }) {
     });
   }, [html, edits]);
 
-  // 4) Menú contextual con position:fixed
+  // 4) Menú contextual (fixed) para texto, imagen, link
   useEffect(() => {
     const handler = e => {
-      // Ignorar clicks dentro del menú
+      // si clic dentro del menú, ignorar
       if (e.target.closest(".ctx-menu")) return;
 
       const el = e.target.closest("[data-editable-type]");
@@ -109,11 +99,11 @@ export function EditorMVP({ htmlUrl, uid }) {
         return;
       }
       e.preventDefault();
-      const rect = el.getBoundingClientRect();
+      const r = el.getBoundingClientRect();
       setCtxMenu({
         show:   true,
-        x:      rect.left + rect.width / 2,
-        y:      rect.top - 8,
+        x:      r.left + r.width/2,
+        y:      r.top - 8,
         type:   el.dataset.editableType,
         target: el
       });
@@ -127,43 +117,38 @@ export function EditorMVP({ htmlUrl, uid }) {
     setCtxMenu(c => ({ ...c, show: false }));
   }
 
-  // 5) Render usando createElement para evitar JSX
+  // 5) Render
   return React.createElement(
     React.Fragment,
     null,
     React.createElement("div", { ref: containerRef }),
-    ctxMenu.show &&
-      ReactDOM.createPortal(
-        React.createElement(
-          "div",
-          {
-            className: "ctx-menu",
-            style: {
-              position: "fixed",
-              left:     ctxMenu.x,
-              top:      ctxMenu.y
-            }
-          },
-          ctxMenu.type === "text" &&
-            React.createElement(
-              "button",
-              { onClick: () => onChangeRichText(ctxMenu, uid, hideMenu) },
-              "Editar texto"
-            ),
-          ctxMenu.type === "image" &&
-            React.createElement(
-              "button",
-              { onClick: () => onChangeImage(ctxMenu, uid, hideMenu) },
-              "Cambiar imagen"
-            ),
-          ctxMenu.type === "link" &&
-            React.createElement(
-              "button",
-              { onClick: () => onChangeLink(ctxMenu, uid, hideMenu) },
-              "Cambiar link"
-            )
-        ),
-        document.body
-      )
+    ctxMenu.show && ReactDOM.createPortal(
+      React.createElement(
+        "div",
+        {
+          className: "ctx-menu",
+          style: { position: "fixed", left: ctxMenu.x, top: ctxMenu.y }
+        },
+        ctxMenu.type === "text" &&
+          React.createElement(
+            "button",
+            { onClick: () => onChangeRichText(ctxMenu, uid, hideMenu) },
+            "Editar texto"
+          ),
+        ctxMenu.type === "image" &&
+          React.createElement(
+            "button",
+            { onClick: () => onChangeImage(ctxMenu, uid, hideMenu) },
+            "Editar imagen"
+          ),
+        ctxMenu.type === "link" &&
+          React.createElement(
+            "button",
+            { onClick: () => onChangeLink(ctxMenu, uid, hideMenu) },
+            "Editar link"
+          )
+      ),
+      document.body
+    )
   );
 }
