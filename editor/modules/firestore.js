@@ -1,26 +1,22 @@
 // public/editor/modules/firestore.js
-import {
-  getFirestore,
-  doc,
-  getDoc,
-  setDoc
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { db }                  from "./firebase.js";
 
-// helper “lazy” que devuelve la instancia de Firestore
-function getDb() {
-  return getFirestore();  // Usará la app DEFAULT si ya fue inicializada
-}
-
-export async function saveEdit(uid, selector, field, value) {
-  const db   = getDb();
-  const ref  = doc(db, "edits", uid);
-  const data = { [selector]: { [field]: value } };
-  await setDoc(ref, data, { merge: true });
-}
-
-export async function loadEdits(uid) {
-  const db   = getDb();
-  const ref  = doc(db, "edits", uid);
+/**
+ * Carga todas las ediciones del usuario para una página (pageId).
+ */
+export async function loadEdits(uid, pageId) {
+  const ref  = doc(db, "edits", uid, "pages", pageId);
   const snap = await getDoc(ref);
   return snap.exists() ? snap.data() : {};
+}
+
+/**
+ * Guarda o mergea una sola edición (selector → { field: value }) 
+ * dentro del documento de la página pageId.
+ */
+export async function saveEdit(uid, pageId, selector, field, value) {
+  const ref = doc(db, "edits", uid, "pages", pageId);
+  const payload = { [selector]: { [field]: value } };
+  await setDoc(ref, payload, { merge: true });
 }
