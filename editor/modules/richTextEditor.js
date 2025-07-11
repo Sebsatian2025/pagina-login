@@ -7,61 +7,70 @@ export function onChangeRichText(ctxMenu, uid, hideMenu) {
   el.contentEditable = true;
   el.focus();
 
-  // 1) buscamos el menú contextual (el botón “Editar texto”)
+  console.log("▶️ EditorRichText ACTIVADO");
+
+  // 1) Encuentra el menú contextual (el botón “Editar texto”)
   const menuEl = document.querySelector(".ctx-menu");
   if (!menuEl) {
-    console.error("No se encontró .ctx-menu");
+    console.error("❌ No se encontró .ctx-menu");
     return;
   }
-  const menuRect = menuEl.getBoundingClientRect();
 
-  console.log("▶️ Inline Bubble ACTIVADO sobre botón");
-
-  // 2) creamos la burbuja
+  // 2) Crea el toolbar como hijo de .ctx-menu
   const tb = document.createElement("div");
   tb.className = "rich-toolbar";
+
+  // 3) Posición absoluta sobre el botón
   Object.assign(tb.style, {
-    position:   "fixed",
-    zIndex:     "10002",
-    background: "#fff",
-    padding:    "6px",
-    boxShadow:  "0 2px 8px rgba(0,0,0,0.15)",
-    borderRadius:"4px",
-    // la colocamos justo encima del botón:
-    top:        `${menuRect.top - 8}px`,             // 8px de margen
-    left:       `${menuRect.left + menuRect.width/2}px`,
-    transform:  "translate(-50%, -100%)"
+    position:      "absolute",
+    bottom:        "100%",                      // justo encima
+    left:          "50%",                       // centrado horizontal
+    transform:     "translateX(-50%) translateY(-8px)",  // margen de 8px
+    background:    "#fff",
+    padding:       "6px",
+    boxShadow:     "0 2px 8px rgba(0,0,0,0.15)",
+    borderRadius:  "4px",
+    zIndex:        "1001"
   });
 
-  // 3) evitar blur al interactuar con el toolbar
+  // 4) Evita que un click en el toolbar haga blur en el elemento editable
   tb.addEventListener("mousedown", e => e.preventDefault());
 
-  // 4) botones de formato
+  // 5) Botones de formato
   tb.innerHTML = `
     <button data-cmd="bold"><b>B</b></button>
     <button data-cmd="italic"><i>I</i></button>
     <button data-cmd="underline"><u>U</u></button>
     <button data-cmd="strikeThrough"><s>S</s></button>
     <input type="color" data-cmd="foreColor"
-           style="width:24px;height:24px;border:none;padding:0;" />
+           title="Color"
+           style="width:24px;height:24px;border:none;padding:0;margin-left:4px;" />
   `;
-  document.body.appendChild(tb);
 
-  // 5) aplicar comando en mousedown
-  tb.querySelectorAll("[data-cmd]").forEach(ctrl => {
-    ctrl.addEventListener("mousedown", e => {
+  // 6) Agrégalo dentro del menuEl, para que viaje con él al hacer scroll
+  menuEl.appendChild(tb);
+  console.log("✅ Toolbar inyectado dentro de .ctx-menu");
+
+  // 7) Ejecuta los comandos en mousedown para conservar foco
+  tb.querySelectorAll("[data-cmd]").forEach(control => {
+    control.addEventListener("mousedown", e => {
       e.preventDefault();
-      const cmd = ctrl.dataset.cmd;
-      const val = ctrl.tagName === "INPUT" ? ctrl.value : null;
+      const cmd = control.dataset.cmd;
+      const val = control.tagName === "INPUT" ? control.value : null;
       document.execCommand(cmd, false, val);
     });
+    if (control.tagName === "INPUT") {
+      control.addEventListener("input", e => {
+        document.execCommand(cmd, false, e.target.value);
+      });
+    }
   });
 
-  // 6) al perder foco guardamos y quitamos la burbuja
+  // 8) Al perder foco, guarda los cambios y limpia el toolbar
   el.onblur = async () => {
     el.contentEditable = false;
-    hideMenu();
-    tb.remove();
+    hideMenu();        // oculta el menú contextual
+    tb.remove();       // quita el toolbar
 
     const selector = getSelector(el);
     const html     = el.innerHTML;
