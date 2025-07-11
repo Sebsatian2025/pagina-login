@@ -7,48 +7,45 @@ export function onChangeRichText(ctxMenu, uid, hideMenu) {
   el.contentEditable = true;
   el.focus();
 
-  console.log("▶️ EditorRichText ACTIVADO");
-  console.log("📍 Posición del toolbar:", ctxMenu.x, ctxMenu.y);
-
-  // 1. Crear toolbar en posición dinámica
+  // Creamos el toolbar
   const tb = document.createElement("div");
   tb.className = "rich-toolbar";
-  tb.style.position = "absolute";
-  tb.style.left     = `${ctxMenu.x}px`;
-  tb.style.top      = `${ctxMenu.y - 10}px`;
 
-  // Prevenir blur al interactuar con el toolbar
+  // Lo fijamos también al viewport
+  tb.style.position = "fixed";
+  tb.style.left     = `${ctxMenu.x}px`;
+  tb.style.top      = `${ctxMenu.y + 24}px`; // 24px abajo del botón
+
+  // Evitar que el click en el toolbar haga blur en el elemento
   tb.addEventListener("mousedown", e => e.preventDefault());
 
-  // 2. Botones esenciales
   tb.innerHTML = `
     <button data-cmd="bold"><b>B</b></button>
     <button data-cmd="italic"><i>I</i></button>
     <button data-cmd="underline"><u>U</u></button>
     <button data-cmd="strikeThrough"><s>S</s></button>
-    <input type="color" data-cmd="foreColor" title="Color" style="width:24px; height:24px; padding:0; border:none;" />
+    <input type="color" data-cmd="foreColor" title="Color"
+           style="width:24px;height:24px;border:none;padding:0;" />
   `;
 
   document.body.appendChild(tb);
-  console.log("✅ Toolbar inyectado");
 
-  // 3. Ejecutar comando al pulsar (usar mousedown para mantener el focus)
-  tb.querySelectorAll("[data-cmd]").forEach(control => {
-    control.addEventListener("mousedown", e => {
+  // Ejecutar comando sin perder focus
+  tb.querySelectorAll("[data-cmd]").forEach(ctrl => {
+    ctrl.addEventListener("mousedown", e => {
       e.preventDefault();
-      const cmd = control.dataset.cmd;
-      const val = control.tagName === "INPUT" ? control.value : null;
+      const cmd = ctrl.dataset.cmd;
+      const val = ctrl.tagName === "INPUT" ? ctrl.value : null;
       document.execCommand(cmd, false, val);
     });
-    if (control.tagName === "INPUT") {
-      control.addEventListener("input", e => {
-        const cmd = e.target.dataset.cmd;
-        document.execCommand(cmd, false, e.target.value);
+    if (ctrl.tagName === "INPUT") {
+      ctrl.addEventListener("input", e => {
+        document.execCommand(ctrl.dataset.cmd, false, e.target.value);
       });
     }
   });
 
-  // 4. Al perder foco guardamos el HTML y removemos el toolbar
+  // Al blur guardamos y cerramos
   el.onblur = async () => {
     el.contentEditable = false;
     hideMenu();
