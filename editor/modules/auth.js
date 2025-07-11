@@ -1,17 +1,18 @@
 // public/editor/modules/auth.js
-import { initializeApp } 
-  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, onAuthStateChanged } 
-  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { auth }        from "./firebaseInit.js";
+import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider } 
+                      from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 
-export function initAuth(firebaseConfig) {
-  const app  = initializeApp(firebaseConfig);
-  return getAuth(app);
+/**
+ * Devuelve la instancia de Auth ya inicializada.
+ */
+export function initAuth() {
+  return auth;
 }
 
-export function onUserReady(auth, callback) {
-  onAuthStateChanged(auth, user => {
-    callback(user);
-  });
+/**
+ * Llama a tu callback cuando el usuario esté listo
+ */
+export function onUserReady(callback) {
+  return onAuthStateChanged(auth, user => callback(user));
 }
-
