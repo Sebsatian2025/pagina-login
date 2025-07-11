@@ -124,6 +124,7 @@ export function EditorMVP({ htmlUrl, uid }) {
     setCtxMenu(c => ({ ...c, show: false }));
   }
 
+  // 5) Render
   return React.createElement(
     React.Fragment,
     null,
@@ -135,7 +136,12 @@ export function EditorMVP({ htmlUrl, uid }) {
         ctxMenu.type === "text" &&
           React.createElement(
             "button",
-            { onClick: () => onChangeRichText(ctxMenu, uid, hideMenu) },
+            {
+              onClick: () => {
+                console.log("🧪 Click en botón EDITAR TEXTO (EditorMVP)");
+                onChangeRichText(ctxMenu, uid, hideMenu);
+              }
+            },
             "Editar texto"
           ),
         ctxMenu.type === "image" &&
