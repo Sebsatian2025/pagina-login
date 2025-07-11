@@ -7,14 +7,23 @@ export function onChangeRichText(ctxMenu, uid, hideMenu) {
   el.contentEditable = true;
   el.focus();
 
+  console.log("▶️ EditorRichText ACTIVADO");
+
   // 1. Crear toolbar
   const tb = document.createElement("div");
   tb.className = "rich-toolbar";
+  tb.style.position = "absolute";
   tb.style.left = `${ctxMenu.x}px`;
   tb.style.top  = `${ctxMenu.y - 10}px`;
 
+  // Visual debug para verificar que se vea
+  tb.style.background = "lime";
+  tb.style.outline = "2px dashed red";
+  tb.style.padding = "6px";
+  tb.innerHTML += `<span style="font-size:12px;">🧪 Toolbar activo</span><br/>`;
+
   // 2. Botones esenciales
-  tb.innerHTML = `
+  tb.innerHTML += `
     <button data-cmd="bold"><b>B</b></button>
     <button data-cmd="italic"><i>I</i></button>
     <button data-cmd="underline"><u>U</u></button>
@@ -23,6 +32,7 @@ export function onChangeRichText(ctxMenu, uid, hideMenu) {
   `;
 
   document.body.appendChild(tb);
+  console.log("✅ Toolbar inyectado");
 
   // 3. Ejecutar comando al pulsar
   tb.querySelectorAll("[data-cmd]").forEach(control => {
@@ -32,7 +42,6 @@ export function onChangeRichText(ctxMenu, uid, hideMenu) {
       const val  = control.tagName === "INPUT" ? control.value : null;
       document.execCommand(cmd, false, val);
     });
-    // para el <input type="color">
     if (control.tagName === "INPUT") {
       control.addEventListener("input", e => {
         const cmd = e.target.dataset.cmd;
