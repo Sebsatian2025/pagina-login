@@ -9,49 +9,69 @@ export function onChangeRichText(ctxMenu, uid, hideMenu) {
 
   console.log("▶️ EditorRichText ACTIVADO");
 
-  // 1) Encuentra el menú contextual (el botón “Editar texto”)
+  // 1) Localiza el menú contextual (botón “Editar texto”)
   const menuEl = document.querySelector(".ctx-menu");
   if (!menuEl) {
     console.error("❌ No se encontró .ctx-menu");
     return;
   }
+  const menuRect = menuEl.getBoundingClientRect();
 
   // 2) Crea el toolbar como hijo de .ctx-menu
   const tb = document.createElement("div");
   tb.className = "rich-toolbar";
 
-  // 3) Posición absoluta sobre el botón
+  // 3) Posición absoluta encima del botón
   Object.assign(tb.style, {
     position:      "absolute",
-    bottom:        "100%",                      // justo encima
-    left:          "50%",                       // centrado horizontal
-    transform:     "translateX(-50%) translateY(-8px)",  // margen de 8px
-    background:    "#fff",
-    padding:       "6px",
-    boxShadow:     "0 2px 8px rgba(0,0,0,0.15)",
+    bottom:        "100%",                       // justo encima
+    left:          "50%",                        // centrado horizontal
+    transform:     "translateX(-50%) translateY(-8px)", // +8px margen
+    background:    "#333",                       // fondo oscuro
+    color:         "#fff",                       // texto claro
+    padding:       "6px 8px",
+    boxShadow:     "0 2px 8px rgba(0,0,0,0.3)",
     borderRadius:  "4px",
+    display:       "flex",
+    gap:           "6px",
     zIndex:        "1001"
   });
 
-  // 4) Evita que un click en el toolbar haga blur en el elemento editable
+  // 4) Prevenir que click en toolbar haga blur en el editable
   tb.addEventListener("mousedown", e => e.preventDefault());
 
-  // 5) Botones de formato
+  // 5) Inserta los botones y el input de color
   tb.innerHTML = `
     <button data-cmd="bold"><b>B</b></button>
     <button data-cmd="italic"><i>I</i></button>
     <button data-cmd="underline"><u>U</u></button>
     <button data-cmd="strikeThrough"><s>S</s></button>
-    <input type="color" data-cmd="foreColor"
-           title="Color"
-           style="width:24px;height:24px;border:none;padding:0;margin-left:4px;" />
+    <input type="color" data-cmd="foreColor" title="Color" />
   `;
-
-  // 6) Agrégalo dentro del menuEl, para que viaje con él al hacer scroll
   menuEl.appendChild(tb);
   console.log("✅ Toolbar inyectado dentro de .ctx-menu");
 
-  // 7) Ejecuta los comandos en mousedown para conservar foco
+  // 6) Ajusta el estilo de botones e input para que sean visibles
+  tb.querySelectorAll("button").forEach(btn => {
+    Object.assign(btn.style, {
+      background: "none",
+      border:     "none",
+      color:      "#fff",
+      cursor:     "pointer",
+      fontSize:   "14px",
+      padding:    "4px"
+    });
+  });
+  const colorInput = tb.querySelector("input[type=color]");
+  Object.assign(colorInput.style, {
+    width:       "24px",
+    height:      "24px",
+    border:      "none",
+    padding:     "0",
+    cursor:      "pointer"
+  });
+
+  // 7) Ejecuta cada comando en mousedown para mantener el foco
   tb.querySelectorAll("[data-cmd]").forEach(control => {
     control.addEventListener("mousedown", e => {
       e.preventDefault();
@@ -59,18 +79,13 @@ export function onChangeRichText(ctxMenu, uid, hideMenu) {
       const val = control.tagName === "INPUT" ? control.value : null;
       document.execCommand(cmd, false, val);
     });
-    if (control.tagName === "INPUT") {
-      control.addEventListener("input", e => {
-        document.execCommand(cmd, false, e.target.value);
-      });
-    }
   });
 
-  // 8) Al perder foco, guarda los cambios y limpia el toolbar
+  // 8) Al perder foco, guarda y remueve el toolbar
   el.onblur = async () => {
     el.contentEditable = false;
-    hideMenu();        // oculta el menú contextual
-    tb.remove();       // quita el toolbar
+    hideMenu();
+    tb.remove();
 
     const selector = getSelector(el);
     const html     = el.innerHTML;
