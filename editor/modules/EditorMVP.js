@@ -2,19 +2,21 @@
 import React, { useState, useEffect, useRef } from "https://esm.sh/react@18.2.0";
 import ReactDOM                                from "https://esm.sh/react-dom@18.2.0";
 
-import { loadEdits }       from "./firestore.js";
+import { loadEdits }        from "./firestore.js";
 import { onChangeRichText } from "./richTextEditor.js";
-import { onChangeImage }   from "./imageEditor.js";
-import { onChangeLink }    from "./linkEditor.js";
-import { onChangeBgImage } from "./bgImageEditor.js";
+import { onChangeImage }    from "./imageEditor.js";
+import { onChangeLink }     from "./linkEditor.js";
+import { onChangeBgImage }  from "./bgImageEditor.js";
 
 export function EditorMVP({ htmlUrl, uid }) {
   const containerRef = useRef(null);
+
+  // Identificador único por URL completa
   const pageId = encodeURIComponent(htmlUrl);
+
   const [html, setHtml]       = useState("");
   const [edits, setEdits]     = useState({});
   const [ctxMenu, setCtxMenu] = useState({
-    
     show:   false,
     x:      0,
     y:      0,
@@ -22,10 +24,7 @@ export function EditorMVP({ htmlUrl, uid }) {
     target: null
   });
 
-  // Calcula un pageId único a partir de la ruta de htmlUrl
-  const pageId = encodeURIComponent(new URL(htmlUrl).pathname);
-
-  // 1) Carga ediciones previas de Firestore para este uid + pageId
+  // 1) Carga ediciones previas para este uid + pageId
   useEffect(() => {
     if (!uid) return;
     loadEdits(uid, pageId)
@@ -37,44 +36,44 @@ export function EditorMVP({ htmlUrl, uid }) {
   useEffect(() => {
     if (!htmlUrl) return;
     fetch(htmlUrl)
-      .then(r => r.text())
+      .then(res => res.text())
       .then(text => {
         const parser = new DOMParser();
         const doc    = parser.parseFromString(text, "text/html");
         const origin = new URL(htmlUrl).origin;
 
-        // base para assets relativos
+        // <base> para rutas relativas
         const baseEl = document.createElement("base");
         baseEl.href  = origin + "/";
         document.head.insertBefore(baseEl, document.head.firstChild);
 
-        // clona meta, link, style
+        // Clonar meta, link, style
         doc.head.querySelectorAll("meta, link[href], style").forEach(n => {
           const clone = n.cloneNode(true);
           if (clone.tagName === "LINK" && !clone.href.startsWith("http")) {
             clone.href = new URL(n.getAttribute("href"), origin).href;
           }
-          document.head.append(clone);
+          document.head.appendChild(clone);
         });
 
-        // inyecta admin.css
+        // Inyectar admin.css
         const css = document.createElement("link");
         css.rel  = "stylesheet";
         css.href = `${window.location.origin}/assets/css/admin.css`;
-        document.head.append(css);
+        document.head.appendChild(css);
 
         setHtml(doc.body.innerHTML);
       })
       .catch(console.error);
   }, [htmlUrl]);
 
-  // 3) Renderiza body + aplica ediciones + marca tipos editables
+  // 3) Renderizar HTML + aplicar ediciones + marcar tipos editables
   useEffect(() => {
     if (!html) return;
     const root = containerRef.current;
     root.innerHTML = html;
 
-    // aplica cada edición
+    // Aplicar cada edición guardada
     Object.entries(edits).forEach(([sel, ch]) => {
       const el = root.querySelector(sel);
       if (!el) return;
@@ -83,31 +82,35 @@ export function EditorMVP({ htmlUrl, uid }) {
       if (ch.href) el.href        = ch.href;
       if (ch.src)  el.src         = ch.src;
       if (ch.style?.backgroundImage) {
-        el.style.backgroundImage = `url(${ch.style.backgroundImage})`;
-        el.style.backgroundSize  = "cover";
+        el.style.backgroundImage    = `url(${ch.style.backgroundImage})`;
+        el.style.backgroundSize     = "cover";
         el.style.backgroundPosition = "center";
       }
     });
 
-    // marca tipos en dataset.editableTypes
+    // Marcar tipos editables
     root.querySelectorAll("*").forEach(el => {
       el.removeAttribute("data-editable-types");
       const types = [];
-      if (["H1","H2","H3","P","SPAN","DIV"].includes(el.tagName) && el.textContent.trim())
+      if (["H1","H2","H3","P","SPAN","DIV"].includes(el.tagName) 
+          && el.textContent.trim()) {
         types.push("text");
+      }
       if (el.tagName === "A") types.push("link");
       if (el.tagName === "IMG") types.push("image");
       const bg = getComputedStyle(el).backgroundImage;
-      if (bg && bg.startsWith("url(") && bg !== "none")
+      if (bg && bg.startsWith("url(") && bg !== "none") {
         types.push("bgImage");
-
-      if (types.length) el.dataset.editableTypes = types.join("|");
+      }
+      if (types.length) {
+        el.dataset.editableTypes = types.join("|");
+      }
     });
   }, [html, edits]);
 
-  // 4) Clic global para mostrar menú contextual
+  // 4) Handler global de clic para menú contextual
   useEffect(() => {
-    const handler = e => {
+    const onClick = e => {
       if (e.target.closest(".ctx-menu")) return;
       const el = e.target.closest("[data-editable-types]");
       if (!el) {
@@ -125,9 +128,8 @@ export function EditorMVP({ htmlUrl, uid }) {
         target: el
       });
     };
-
-    document.addEventListener("click", handler, true);
-    return () => document.removeEventListener("click", handler, true);
+    document.addEventListener("click", onClick, true);
+    return () => document.removeEventListener("click", onClick, true);
   }, []);
 
   const hideMenu = () => {
@@ -145,7 +147,7 @@ export function EditorMVP({ htmlUrl, uid }) {
           "div",
           {
             className: "ctx-menu",
-            style: { position: "fixed", left: ctxMenu.x, top: ctxMenu.y }
+            style:     { position: "fixed", left: ctxMenu.x, top: ctxMenu.y }
           },
           ctxMenu.types.includes("text") &&
             React.createElement(
