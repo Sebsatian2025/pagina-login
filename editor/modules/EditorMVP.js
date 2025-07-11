@@ -1,61 +1,54 @@
 // public/editor/modules/EditorMVP.js
 import React, { useState, useEffect, useRef } from "https://esm.sh/react@18.2.0";
-import ReactDOM                                from "https://esm.sh/react-dom@18.2.0";
+import ReactDOM from "https://esm.sh/react-dom@18.2.0";
 
-import { loadEdits }        from "./firestore.js";
+import { loadEdits } from "./firestore.js";
 import { onChangeRichText } from "./richTextEditor.js";
-import { onChangeImage }    from "./imageEditor.js";
-import { onChangeLink }     from "./linkEditor.js";
-import { onChangeBgImage }  from "./bgImageEditor.js";
+import { onChangeImage } from "./imageEditor.js";
+import { onChangeLink }  from "./linkEditor.js";
+import { onChangeBgImage } from "./bgImageEditor.js";
 
 export function EditorMVP({ htmlUrl, uid }) {
   const containerRef = useRef(null);
-  // Usa la URL completa como pageId para aislar edits
   const pageId = encodeURIComponent(htmlUrl);
 
   const [html, setHtml]   = useState("");
   const [edits, setEdits] = useState({});
   const [ctxMenu, setCtxMenu] = useState({
-    show:   false,
-    x:      0,
-    y:      0,
-    types:  [],
-    target: null
+    show: false, x: 0, y: 0, types: [], target: null
   });
 
-  // 1) Carga ediciones previas
+  // 1) Carga ediciones
   useEffect(() => {
     if (!uid) return;
-    loadEdits(uid, pageId)
-      .then(data => setEdits(data))
-      .catch(console.error);
+    loadEdits(uid, pageId).then(setEdits).catch(console.error);
   }, [uid, pageId]);
 
-  // 2) Fetch HTML + clonar <head> + inyectar admin.css
+  // 2) Fetch + head + admin.css
   useEffect(() => {
     if (!htmlUrl) return;
     fetch(htmlUrl)
       .then(r => r.text())
       .then(text => {
         const parser = new DOMParser();
-        const doc    = parser.parseFromString(text, "text/html");
+        const doc = parser.parseFromString(text, "text/html");
         const origin = new URL(htmlUrl).origin;
 
-        // <base> para rutas relativas
-        const baseEl = document.createElement("base");
-        baseEl.href  = origin + "/";
-        document.head.insertBefore(baseEl, document.head.firstChild);
+        // Inyecta <base>
+        const base = document.createElement("base");
+        base.href = origin + "/";
+        document.head.insertBefore(base, document.head.firstChild);
 
-        // Clona meta, link, style
+        // Clona meta, link y style
         doc.head.querySelectorAll("meta, link[href], style").forEach(n => {
-          const clone = n.cloneNode(true);
-          if (clone.tagName === "LINK" && !clone.href.startsWith("http")) {
-            clone.href = new URL(n.getAttribute("href"), origin).href;
+          const c = n.cloneNode(true);
+          if (c.tagName === "LINK" && !c.href.startsWith("http")) {
+            c.href = new URL(n.getAttribute("href"), origin).href;
           }
-          document.head.appendChild(clone);
+          document.head.appendChild(c);
         });
 
-        // Inyecta tu CSS de admin
+        // Admin.css
         const css = document.createElement("link");
         css.rel  = "stylesheet";
         css.href = `${window.location.origin}/assets/css/admin.css`;
@@ -66,7 +59,7 @@ export function EditorMVP({ htmlUrl, uid }) {
       .catch(console.error);
   }, [htmlUrl]);
 
-  // 3) Renderiza y aplica ediciones + marca tipos + añade iconos de imagen
+  // 3) Render + aplicar ediciones + marcar tipos
   useEffect(() => {
     if (!html) return;
     const root = containerRef.current;
@@ -92,28 +85,28 @@ export function EditorMVP({ htmlUrl, uid }) {
       el.removeAttribute("data-editable-types");
       const types = [];
 
-      // Texto
+      //  → Texto: incluye ahora también <a>
       if (
-        ["H1","H2","H3","P","SPAN","DIV"].includes(el.tagName) &&
+        ["H1","H2","H3","P","SPAN","DIV","A"].includes(el.tagName) &&
         el.textContent.trim()
       ) {
         types.push("text");
       }
 
-      // Link
+      //  → Link: todos los <a> (si efectivamente llevan href)
       if (el.tagName === "A") {
         types.push("link");
       }
 
-      // Imagen normal
+      //  → Imagen normal
       if (el.tagName === "IMG") {
-        // icono de lápiz
         types.push("image");
         el.style.cursor = "pointer";
         const parent = el.parentElement;
         if (getComputedStyle(parent).position === "static") {
           parent.style.position = "relative";
         }
+        // Icono lápiz
         const icon = document.createElement("div");
         icon.className = "img-edit-icon";
         icon.innerText = "✎";
@@ -139,12 +132,12 @@ export function EditorMVP({ htmlUrl, uid }) {
         icon.addEventListener("click", e => {
           e.stopPropagation();
           onChangeImage({ target: el }, uid, pageId, () =>
-            setCtxMenu(c => ({ ...c, show: false }))
+            setCtxMenu(m => ({ ...m, show: false }))
           );
         });
       }
 
-      // Fondo
+      //  → Fondo
       const bg = getComputedStyle(el).backgroundImage;
       if (bg && bg.startsWith("url(") && bg !== "none") {
         types.push("bgImage");
@@ -156,7 +149,7 @@ export function EditorMVP({ htmlUrl, uid }) {
     });
   }, [html, edits, uid, pageId]);
 
-  // 4) Clic global para menú contextual (texto, link, fondo)
+  // 4) Clic global para menú contextual (texto / link / fondo)
   useEffect(() => {
     const handler = e => {
       if (e.target.closest(".ctx-menu")) return;
@@ -180,44 +173,43 @@ export function EditorMVP({ htmlUrl, uid }) {
     return () => document.removeEventListener("click", handler, true);
   }, []);
 
-  const hideMenu = () => {
-    setCtxMenu(m => ({ ...m, show: false }));
-  };
+  const hideMenu = () => setCtxMenu(m => ({ ...m, show: false }));
 
-  // 5) Render
+  // 5) Render final
   return React.createElement(
     React.Fragment,
     null,
     React.createElement("div", { ref: containerRef }),
-    ctxMenu.show &&
-      ReactDOM.createPortal(
-        React.createElement(
-          "div",
-          {
-            className: "ctx-menu",
-            style: { position: "fixed", left: ctxMenu.x, top: ctxMenu.y }
-          },
-          // Solo texto, link y fondo (no imagen)
-          ctxMenu.types.includes("text") &&
-            React.createElement(
-              "button",
-              { onClick: () => onChangeRichText(ctxMenu, uid, pageId, hideMenu) },
-              "Editar texto"
-            ),
-          ctxMenu.types.includes("link") &&
-            React.createElement(
-              "button",
-              { onClick: () => onChangeLink(ctxMenu, uid, pageId, hideMenu) },
-              "Editar link"
-            ),
-          ctxMenu.types.includes("bgImage") &&
-            React.createElement(
-              "button",
-              { onClick: () => onChangeBgImage(ctxMenu, uid, pageId, hideMenu) },
-              "Editar fondo"
-            )
-        ),
-        document.body
-      )
+    ctxMenu.show && ReactDOM.createPortal(
+      React.createElement(
+        "div",
+        {
+          className: "ctx-menu",
+          style:     { position: "fixed", left: ctxMenu.x, top: ctxMenu.y }
+        },
+        // EDITAR TEXTO
+        ctxMenu.types.includes("text") &&
+          React.createElement(
+            "button",
+            { onClick: () => onChangeRichText(ctxMenu, uid, pageId, hideMenu) },
+            "Editar texto"
+          ),
+        // EDITAR LINK
+        ctxMenu.types.includes("link") &&
+          React.createElement(
+            "button",
+            { onClick: () => onChangeLink(ctxMenu, uid, pageId, hideMenu) },
+            "Editar link"
+          ),
+        // EDITAR FONDO
+        ctxMenu.types.includes("bgImage") &&
+          React.createElement(
+            "button",
+            { onClick: () => onChangeBgImage(ctxMenu, uid, pageId, hideMenu) },
+            "Editar fondo"
+          )
+      ),
+      document.body
+    )
   );
 }
