@@ -1,12 +1,13 @@
 // public/editor/modules/utils.js
-export function getParam(name) {
-  const p = new URLSearchParams(window.location.search).get(name);
-  return p ? decodeURIComponent(p) : "";
-}
 
+/**
+ * Genera un selector único simplificado para un elemento.
+ * Si tiene id → usa #id, sino tagName:nth-child().
+ */
 export function getSelector(el) {
   if (el.id) return `#${el.id}`;
-  const idx = Array.prototype.indexOf.call(el.parentNode.children, el) + 1;
-  return `${el.tagName.toLowerCase()}:nth-child(${idx})`;
+  const tag   = el.tagName.toLowerCase();
+  const parent = el.parentElement;
+  const idx   = Array.from(parent.children).indexOf(el) + 1;
+  return `${tag}:nth-child(${idx})`;
 }
-
