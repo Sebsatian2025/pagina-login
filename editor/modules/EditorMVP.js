@@ -10,9 +10,11 @@ import { onChangeBgImage } from "./bgImageEditor.js";
 
 export function EditorMVP({ htmlUrl, uid }) {
   const containerRef = useRef(null);
+  const pageId = encodeURIComponent(htmlUrl);
   const [html, setHtml]       = useState("");
   const [edits, setEdits]     = useState({});
   const [ctxMenu, setCtxMenu] = useState({
+    
     show:   false,
     x:      0,
     y:      0,
