@@ -12,7 +12,6 @@ import { getSelector }      from "./utils.js";
 
 export function EditorMVP({ htmlUrl, uid }) {
   const containerRef = useRef(null);
-  // guardamos por selector: { maxLines, lineHeight }
   const sizesRef     = useRef(new Map());
   const pageId       = encodeURIComponent(htmlUrl);
 
@@ -26,15 +25,13 @@ export function EditorMVP({ htmlUrl, uid }) {
     target: null
   });
 
-  // 1) Carga ediciones previas de Firestore
+  // 1) Carga ediciones guardadas
   useEffect(() => {
     if (!uid) return;
-    loadEdits(uid, pageId)
-      .then(data => setEdits(data))
-      .catch(console.error);
+    loadEdits(uid, pageId).then(setEdits).catch(console.error);
   }, [uid, pageId]);
 
-  // 2) Trae el HTML original + clona <head> + inyecta admin.css
+  // 2) Trae el HTML original y clona <head> / admin.css
   useEffect(() => {
     if (!htmlUrl) return;
     fetch(htmlUrl)
@@ -43,46 +40,43 @@ export function EditorMVP({ htmlUrl, uid }) {
         const doc    = new DOMParser().parseFromString(text, "text/html");
         const origin = new URL(htmlUrl).origin;
 
-        // base para assets relativos
         const base = document.createElement("base");
         base.href  = origin + "/";
         document.head.insertBefore(base, document.head.firstChild);
 
-        // clona meta, link, style
         doc.head.querySelectorAll("meta, link[href], style")
           .forEach(n => {
-            const c = n.cloneNode(true);
-            if (c.tagName === "LINK" && !c.href.startsWith("http")) {
-              c.href = new URL(n.getAttribute("href"), origin).href;
+            const clone = n.cloneNode(true);
+            if (clone.tagName === "LINK" && !clone.href.startsWith("http")) {
+              clone.href = new URL(n.getAttribute("href"), origin).href;
             }
-            document.head.appendChild(c);
+            document.head.appendChild(clone);
           });
 
-        // inyecta admin.css
-        const css = document.createElement("link");
-        css.rel  = "stylesheet";
-        css.href = `${window.location.origin}/assets/css/admin.css`;
-        document.head.appendChild(css);
+        const adminCss = document.createElement("link");
+        adminCss.rel  = "stylesheet";
+        adminCss.href = `${window.location.origin}/assets/css/admin.css`;
+        document.head.appendChild(adminCss);
 
         setHtml(doc.body.innerHTML);
       })
       .catch(console.error);
   }, [htmlUrl]);
 
-  // 3) Renderiza body, aplica ediciones, marca tipos e inyecta iconos
+  // 3) Render + aplica ediciones + marca tipos + iconos + captura líneas
   useEffect(() => {
     if (!html) return;
     const root = containerRef.current;
     root.innerHTML = html;
 
-    // 3.1) Aplica cada edición guardada
+    // Aplica cada edición
     Object.entries(edits).forEach(([sel, ch]) => {
       const el = root.querySelector(sel);
       if (!el) return;
-      if (ch.html)       el.innerHTML               = ch.html;
-      if (ch.text)       el.innerText               = ch.text;
-      if (ch.href)       el.href                    = ch.href;
-      if (ch.src)        el.src                     = ch.src;
+      if (ch.html)               el.innerHTML            = ch.html;
+      if (ch.text)               el.innerText            = ch.text;
+      if (ch.href)               el.href                 = ch.href;
+      if (ch.src)                el.src                  = ch.src;
       if (ch.style?.backgroundImage) {
         el.style.backgroundImage    = `url(${ch.style.backgroundImage})`;
         el.style.backgroundSize     = "cover";
@@ -93,14 +87,15 @@ export function EditorMVP({ htmlUrl, uid }) {
       }
     });
 
-    // 3.2) Recorre todo el DOM, detecta tipos, captura tamaños e inyecta iconos
+    // Recorre todo el DOM
     root.querySelectorAll("*").forEach(el => {
       el.removeAttribute("data-editable-types");
       const types = [];
 
-      // TEXTO (incluye <a>)
+      // TEXT
       if (
-        ["H1","H2","H3","P","SPAN","DIV","A"].includes(el.tagName) &&
+        ["H1","H2","H3","P","SPAN","DIV","A"]
+          .includes(el.tagName) &&
         el.textContent.trim()
       ) {
         types.push("text");
@@ -111,7 +106,7 @@ export function EditorMVP({ htmlUrl, uid }) {
         types.push("link");
       }
 
-      // IMAGEN normal
+      // IMG (etiqueta)
       if (el.tagName === "IMG") {
         types.push("image");
         el.style.cursor = "pointer";
@@ -119,29 +114,26 @@ export function EditorMVP({ htmlUrl, uid }) {
         if (getComputedStyle(parent).position === "static") {
           parent.style.position = "relative";
         }
-        const icon = document.createElement("div");
-        icon.className = "img-edit-icon";
-        icon.innerText = "✎";
-        Object.assign(icon.style, {
-          position: "absolute",
-          top:      "8px",
-          right:    "8px",
-          background: "var(--bs-primary)",
+        const imgIcon = document.createElement("div");
+        imgIcon.className = "img-edit-icon";
+        imgIcon.innerText = "✎";
+        Object.assign(imgIcon.style, {
+          position:   "absolute",
+          top:        "8px",
+          right:      "8px",
+          background: "rgba(0,0,0,0.6)",
           color:      "#fff",
-          borderRadius: "50%",
-          width:      "24px",
-          height:     "24px",
-          lineHeight: "24px",
-          textAlign:  "center",
+          borderRadius: "4px",
+          padding:    "2px 6px",
           fontSize:   "14px",
           cursor:     "pointer",
           display:    "none",
-          zIndex:     "1001"
+          zIndex:     1001
         });
-        parent.appendChild(icon);
-        parent.addEventListener("mouseenter", () => icon.style.display = "block");
-        parent.addEventListener("mouseleave", () => icon.style.display = "none");
-        icon.addEventListener("click", e => {
+        parent.appendChild(imgIcon);
+        parent.addEventListener("mouseenter", () => imgIcon.style.display = "block");
+        parent.addEventListener("mouseleave", () => imgIcon.style.display = "none");
+        imgIcon.addEventListener("click", e => {
           e.stopPropagation();
           onChangeImage({ target: el }, uid, pageId, () =>
             setCtxMenu(m => ({ ...m, show: false }))
@@ -149,13 +141,41 @@ export function EditorMVP({ htmlUrl, uid }) {
         });
       }
 
-      // FONDO imagen
+      // BACKGROUND-IMAGE (CSS)
       const bgImg = getComputedStyle(el).backgroundImage;
       if (bgImg.startsWith("url(") && bgImg !== "none") {
         types.push("bgImage");
+        if (getComputedStyle(el).position === "static") {
+          el.style.position = "relative";
+        }
+        const bgIcon = document.createElement("div");
+        bgIcon.className = "bgimage-edit-icon";
+        bgIcon.innerText = "🖼";
+        Object.assign(bgIcon.style, {
+          position:   "absolute",
+          top:        "8px",
+          right:      "8px",
+          background: "rgba(0,0,0,0.6)",
+          color:      "#fff",
+          borderRadius: "4px",
+          padding:    "2px 6px",
+          fontSize:   "14px",
+          cursor:     "pointer",
+          display:    "none",
+          zIndex:     1001
+        });
+        el.appendChild(bgIcon);
+        el.addEventListener("mouseenter", () => bgIcon.style.display = "block");
+        el.addEventListener("mouseleave", () => bgIcon.style.display = "none");
+        bgIcon.addEventListener("click", e => {
+          e.stopPropagation();
+          onChangeBgImage({ target: el }, uid, pageId, () =>
+            setCtxMenu(m => ({ ...m, show: false }))
+          );
+        });
       }
 
-      // FONDO color (bootstrap bg-primary o inline)
+      // BACKGROUND-COLOR
       const bgColor = getComputedStyle(el).backgroundColor;
       if (
         bgColor &&
@@ -164,33 +184,29 @@ export function EditorMVP({ htmlUrl, uid }) {
       ) {
         types.push("bgColor");
         el.style.cursor = "pointer";
-        const parent = el;
-        if (getComputedStyle(parent).position === "static") {
-          parent.style.position = "relative";
+        if (getComputedStyle(el).position === "static") {
+          el.style.position = "relative";
         }
-        const colorIcon = document.createElement("div");
-        colorIcon.className = "bgcolor-edit-icon";
-        colorIcon.innerText = "🎨";
-        Object.assign(colorIcon.style, {
-          position: "absolute",
-          top:      "8px",
-          left:     "8px",
-          background: "var(--bs-success)",
+        const brush = document.createElement("div");
+        brush.className = "bgcolor-edit-icon";
+        brush.innerText = "🖌";
+        Object.assign(brush.style, {
+          position:   "absolute",
+          top:        "8px",
+          left:       "8px",
+          background: "rgba(0,0,0,0.6)",
           color:      "#fff",
-          borderRadius: "50%",
-          width:      "24px",
-          height:     "24px",
-          lineHeight: "24px",
-          textAlign:  "center",
+          borderRadius: "4px",
+          padding:    "2px 6px",
           fontSize:   "14px",
           cursor:     "pointer",
           display:    "none",
-          zIndex:     "1001"
+          zIndex:     1001
         });
-        parent.appendChild(colorIcon);
-        parent.addEventListener("mouseenter", () => colorIcon.style.display = "block");
-        parent.addEventListener("mouseleave", () => colorIcon.style.display = "none");
-        colorIcon.addEventListener("click", e => {
+        el.appendChild(brush);
+        el.addEventListener("mouseenter", () => brush.style.display = "block");
+        el.addEventListener("mouseleave", () => brush.style.display = "none");
+        brush.addEventListener("click", e => {
           e.stopPropagation();
           onChangeBgColor({ target: el }, uid, pageId, () =>
             setCtxMenu(m => ({ ...m, show: false }))
@@ -198,7 +214,7 @@ export function EditorMVP({ htmlUrl, uid }) {
         });
       }
 
-      // CÁLCULO DE MAX LÍNEAS para bloques de texto
+      // CÁLCULO DE MÁXIMO LÍNEAS
       if (types.includes("text")) {
         const sel   = getSelector(el);
         const style = getComputedStyle(el);
@@ -207,7 +223,6 @@ export function EditorMVP({ htmlUrl, uid }) {
           : el.getBoundingClientRect().height;
         const lh = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.2;
         const rawLines = Math.floor(containerH / lh);
-        // permitimos tantas líneas como cabían originalmente (mínimo 1)
         const maxLines = Math.max(1, rawLines);
         sizesRef.current.set(sel, { maxLines, lineHeight: lh });
       }
@@ -218,7 +233,7 @@ export function EditorMVP({ htmlUrl, uid }) {
     });
   }, [html, edits, uid, pageId]);
 
-  // 4) Click global para menú contextual
+  // 4) Click global → menú contextual
   useEffect(() => {
     const handler = e => {
       if (e.target.closest(".ctx-menu")) return;
@@ -244,7 +259,7 @@ export function EditorMVP({ htmlUrl, uid }) {
 
   const hideMenu = () => setCtxMenu(m => ({ ...m, show: false }));
 
-  // 5) Renderiza
+  // 5) Render final
   return React.createElement(
     React.Fragment,
     null,
