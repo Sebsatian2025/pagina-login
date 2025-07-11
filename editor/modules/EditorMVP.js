@@ -8,7 +8,12 @@ import { onChangeImage }                 from "./imageEditor.js";
 import { onChangeLink }                  from "./linkEditor.js";
 
 export function EditorMVP({ htmlUrl, uid }) {
+  // Debug: confirma render del componente y valores iniciales
+  console.log("🔧 EditorMVP renderizado con htmlUrl, uid:", htmlUrl, uid);
+
   const containerRef = useRef(null);
+  console.log("📦 containerRef al inicio:", containerRef.current);
+
   const [html, setHtml]       = useState("");
   const [edits, setEdits]     = useState({});
   const [ctxMenu, setCtxMenu] = useState({
