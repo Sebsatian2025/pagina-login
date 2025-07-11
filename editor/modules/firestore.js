@@ -1,9 +1,9 @@
 // public/editor/modules/firestore.js
-import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
-import { db }                  from "./firebase.js";
+import { db }                   from "./firebaseInit.js";
+import { doc, getDoc, setDoc }  from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
 /**
- * Carga todas las ediciones del usuario para una página (pageId).
+ * Carga ediciones para uid + pageId
  */
 export async function loadEdits(uid, pageId) {
   const ref  = doc(db, "edits", uid, "pages", pageId);
@@ -12,10 +12,10 @@ export async function loadEdits(uid, pageId) {
 }
 
 /**
- * Guarda o mergea una sola edición dentro del documento de la página.
+ * Guarda una edición en uid + pageId
  */
 export async function saveEdit(uid, pageId, selector, field, value) {
   const ref     = doc(db, "edits", uid, "pages", pageId);
   const payload = { [selector]: { [field]: value } };
-  await setDoc(ref, payload, { merge: true });
+  return setDoc(ref, payload, { merge: true });
 }
