@@ -2,26 +2,28 @@
 import { saveEdit }    from "./firestore.js";
 import { getSelector } from "./utils.js";
 
-// ✅ Export directo para que EditorMVP lo pueda importar correctamente
 export function onChangeRichText(ctxMenu, uid, hideMenu) {
   const el = ctxMenu.target;
   el.contentEditable = true;
   el.focus();
 
   console.log("▶️ EditorRichText ACTIVADO");
+  console.log("📍 Posición del toolbar:", ctxMenu.x, ctxMenu.y);
 
-  // 1. Crear toolbar
+  // 1. Crear toolbar (posición fija de prueba para debug)
   const tb = document.createElement("div");
   tb.className = "rich-toolbar";
   tb.style.position = "absolute";
-  tb.style.left = `${ctxMenu.x}px`;
-  tb.style.top  = `${ctxMenu.y - 10}px`;
+  tb.style.left = "300px";        // ← posición fija
+  tb.style.top  = "150px";        // ← posición fija
 
-  // Visual debug para verificar que se vea
+  // Estilos de debug visual
   tb.style.background = "lime";
-  tb.style.outline = "2px dashed red";
-  tb.style.padding = "6px";
-  tb.innerHTML += `<span style="font-size:12px;">🧪 Toolbar activo</span><br/>`;
+  tb.style.outline    = "2px dashed red";
+  tb.style.padding    = "8px";
+  tb.style.zIndex     = "9999";
+
+  tb.innerHTML += `<div style="margin-bottom:6px;">🧪 Toolbar activo</div>`;
 
   // 2. Botones esenciales
   tb.innerHTML += `
@@ -35,7 +37,7 @@ export function onChangeRichText(ctxMenu, uid, hideMenu) {
   document.body.appendChild(tb);
   console.log("✅ Toolbar inyectado");
 
-  // 3. Ejecutar comando al pulsar
+  // 3. Ejecutar comandos
   tb.querySelectorAll("[data-cmd]").forEach(control => {
     control.addEventListener("click", e => {
       e.preventDefault();
@@ -51,7 +53,7 @@ export function onChangeRichText(ctxMenu, uid, hideMenu) {
     }
   });
 
-  // 4. Al perder foco guardamos el HTML
+  // 4. Guardar edición al perder foco
   el.onblur = async () => {
     el.contentEditable = false;
     hideMenu();
