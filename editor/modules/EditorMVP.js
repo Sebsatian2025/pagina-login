@@ -8,46 +8,112 @@ import { onChangeLink }                  from "./linkEditor.js";
 
 export function EditorMVP({ htmlUrl, uid }) {
   const containerRef = useRef(null);
-  const [html, setHtml]       = useState("");
-  const [edits, setEdits]     = useState({});
+  const [html, setHtml]   = useState("");
+  const [edits, setEdits] = useState({});
   const [ctxMenu, setCtxMenu] = useState({
     show: false, x: 0, y: 0, type: null, target: null
   });
 
-  // Cargar ediciones previas
+  const ADMIN_HOST = window.location.origin;
+
+  // 1) Cargar ediciones previas
   useEffect(() => {
     if (!uid) return;
     loadEdits(uid).then(setEdits).catch(console.error);
   }, [uid]);
 
-  // Carga de htmlUrl … (idéntico a tu versión anterior)
-  // …
+  // 2) Fetch + clonación del <head>
+  useEffect(() => {
+    if (!htmlUrl) {
+      console.error("❌ Falta htmlUrl");
+      return;
+    }
+    fetch(htmlUrl)
+      .then(res => res.text())
+      .then(text => {
+        const parser = new DOMParser();
+        const doc    = parser.parseFromString(text, "text/html");
+        const origin = new URL(htmlUrl).origin;
 
-  // Menú contextual
+        // A) <base> para rutas relativas
+        const baseEl = document.createElement("base");
+        baseEl.href  = origin + "/";
+        document.head.insertBefore(baseEl, document.head.firstChild);
+
+        // B) Clonar <meta>
+        doc.head.querySelectorAll("meta").forEach(m => {
+          document.head.appendChild(m.cloneNode(true));
+        });
+
+        // C) Clonar <link href=...>
+        doc.head.querySelectorAll("link[href]").forEach(link => {
+          const nl = link.cloneNode();
+          if (!nl.href.startsWith("http")) {
+            nl.href = new URL(link.getAttribute("href"), origin).href;
+          }
+          document.head.appendChild(nl);
+        });
+
+        // D) Clonar <style>
+        doc.head.querySelectorAll("style").forEach(s => {
+          document.head.appendChild(s.cloneNode(true));
+        });
+
+        // E) Inyectar admin.css
+        const adminCss = document.createElement("link");
+        adminCss.rel  = "stylesheet";
+        adminCss.href = `${ADMIN_HOST}/assets/css/admin.css`;
+        document.head.appendChild(adminCss);
+
+        // F) Guardar <body>
+        setHtml(doc.body.innerHTML);
+      })
+      .catch(err => console.error("❌ Fetch error:", err));
+  }, [htmlUrl]);
+
+  // 3) Inyectar HTML + aplicar ediciones
+  useEffect(() => {
+    if (!html) return;
+    const root = containerRef.current;
+    root.innerHTML = html;
+
+    Object.entries(edits).forEach(([sel, changes]) => {
+      const el = root.querySelector(sel);
+      if (!el) return;
+      if (changes.html) el.innerHTML = changes.html;
+      else if (changes.text) el.innerText = changes.text;
+      if (changes.href) el.href = changes.href;
+      if (changes.src)  el.src  = changes.src;
+    });
+
+    root.querySelectorAll("h1,h2,h3,p,span").forEach(el => {
+      el.dataset.editableType = "text";
+    });
+    root.querySelectorAll("img").forEach(el => {
+      el.dataset.editableType = "image";
+    });
+    root.querySelectorAll("a").forEach(el => {
+      el.dataset.editableType = "link";
+    });
+  }, [html, edits]);
+
+  // 4) Menú contextual con position:fixed
   useEffect(() => {
     const handler = e => {
-      // 1) Si haces click dentro del menú, no lo cerramos
+      // Ignorar clicks dentro del menú
       if (e.target.closest(".ctx-menu")) return;
 
-      // 2) Detectar elemento editable
       const el = e.target.closest("[data-editable-type]");
       if (!el) {
         setCtxMenu(c => ({ ...c, show: false }));
         return;
       }
-
       e.preventDefault();
-      const r = el.getBoundingClientRect();
-
-      // 3) Calculamos coordenadas RELATIVAS AL VIEWPORT
-      const x = r.left + r.width / 2;
-      const y = r.top  - 8;
-
-      // 4) Mostramos el menú con position:fixed
+      const rect = el.getBoundingClientRect();
       setCtxMenu({
         show:   true,
-        x,       // valores del viewport
-        y,
+        x:      rect.left + rect.width / 2,
+        y:      rect.top - 8,
         type:   el.dataset.editableType,
         target: el
       });
@@ -61,38 +127,43 @@ export function EditorMVP({ htmlUrl, uid }) {
     setCtxMenu(c => ({ ...c, show: false }));
   }
 
-  return (
-    <>
-      <div ref={containerRef} />
-      {ctxMenu.show && ReactDOM.createPortal(
-        <div
-          className="ctx-menu"
-          style={{
-            position: "fixed",      // <-- clave: fijo al viewport
-            left:     ctxMenu.x,
-            top:      ctxMenu.y,
-          }}
-        >
-          {ctxMenu.type === "text" && (
-            <button
-              onClick={() => onChangeRichText(ctxMenu, uid, hideMenu)}
-            >
-              Editar texto
-            </button>
-          )}
-          {ctxMenu.type === "image" && (
-            <button onClick={() => onChangeImage(ctxMenu, uid, hideMenu)}>
-              Cambiar imagen
-            </button>
-          )}
-          {ctxMenu.type === "link" && (
-            <button onClick={() => onChangeLink(ctxMenu, uid, hideMenu)}>
-              Cambiar link
-            </button>
-          )}
-        </div>,
+  // 5) Render usando createElement para evitar JSX
+  return React.createElement(
+    React.Fragment,
+    null,
+    React.createElement("div", { ref: containerRef }),
+    ctxMenu.show &&
+      ReactDOM.createPortal(
+        React.createElement(
+          "div",
+          {
+            className: "ctx-menu",
+            style: {
+              position: "fixed",
+              left:     ctxMenu.x,
+              top:      ctxMenu.y
+            }
+          },
+          ctxMenu.type === "text" &&
+            React.createElement(
+              "button",
+              { onClick: () => onChangeRichText(ctxMenu, uid, hideMenu) },
+              "Editar texto"
+            ),
+          ctxMenu.type === "image" &&
+            React.createElement(
+              "button",
+              { onClick: () => onChangeImage(ctxMenu, uid, hideMenu) },
+              "Cambiar imagen"
+            ),
+          ctxMenu.type === "link" &&
+            React.createElement(
+              "button",
+              { onClick: () => onChangeLink(ctxMenu, uid, hideMenu) },
+              "Cambiar link"
+            )
+        ),
         document.body
-      )}
-    </>
+      )
   );
 }
