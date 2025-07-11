@@ -1,4 +1,3 @@
-// public/editor/modules/richTextEditor.js
 import { saveEdit }    from "./firestore.js";
 import { getSelector } from "./utils.js";
 
@@ -89,7 +88,10 @@ export function onChangeRichText(
       const newHeight = el.getBoundingClientRect().height;
       const newLines  = Math.round(newHeight / cfg.lineHeight);
       if (newLines > cfg.maxLines) {
-        alert(`Tu texto ocupa ${newLines} líneas (máx ${cfg.maxLines}). Recorta el contenido.`);
+        alert(
+          `Tu texto ocupa ${newLines} líneas (máx ${cfg.maxLines}). ` +
+          `Recorta el contenido o haz párrafos más cortos.`
+        );
         el.innerHTML = prevHtml;
         return;
       }
