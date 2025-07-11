@@ -1,35 +1,48 @@
 // public/editor/modules/imageEditor.js
-import { saveEdit } from "./firestore.js";
+import { saveEdit }    from "./firestore.js";
 import { getSelector } from "./utils.js";
 
 export function onChangeImage(ctxMenu, uid, hideMenu) {
-  const el  = ctxMenu.target;
-  const inp = document.createElement("input");
-  inp.type  = "file";
-  inp.accept= "image/*";
+  const img = ctxMenu.target;
 
-  inp.onchange = () => {
-    const file = inp.files[0];
+  // Crear input[type=file] para escoger imagen
+  const chooser = document.createElement("input");
+  chooser.type    = "file";
+  chooser.accept  = "image/*";
+  chooser.style.display = "none";
+  document.body.appendChild(chooser);
+
+  // Al seleccionar archivo, leerlo y actualizar src
+  chooser.onchange = () => {
+    const file = chooser.files[0];
     if (!file) {
+      chooser.remove();
       hideMenu();
       return;
     }
     const reader = new FileReader();
-    reader.onload = async () => {
-      el.src = reader.result;
-      hideMenu();
+    reader.onload = async e => {
+      img.src = e.target.result;
+      // Ajustar para no romper el layout
+      img.style.width      = "100%";
+      img.style.height     = "auto";
+      img.style.objectFit  = "cover";
 
-      const selector = getSelector(el);
+      // Guardar en Firestore
+      const selector = getSelector(img);
       try {
-        await saveEdit(uid, selector, "src", reader.result);
-        console.log("✔️ Imagen guardada:", selector);
-      } catch (err) {
+        await saveEdit(uid, selector, "src", e.target.result);
+        console.log("✔️ Imagen actualizada:", selector);
+      } catch(err) {
         console.error("❌ Error guardando imagen:", err);
       }
     };
     reader.readAsDataURL(file);
+
+    hideMenu();
+    chooser.remove();
   };
 
-  inp.click();
+  // Disparar diálogo
+  chooser.click();
 }
-
