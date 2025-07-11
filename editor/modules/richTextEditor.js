@@ -7,7 +7,7 @@ function injectOverrides() {
   if (injected) return;
   injected = true;
   const style = document.createElement("style");
-  style.id      = "richTextEditorOverrides";
+  style.id = "richTextEditorOverrides";
   style.textContent = `
     .rich-toolbar {
       background: rgba(0,0,0,0.85) !important;
@@ -43,11 +43,9 @@ export function onChangeRichText(ctxMenu, uid, pageId, hideMenu) {
   const menuEl = document.querySelector(".ctx-menu");
   if (!menuEl) return;
 
-  // Remueve toolbar anterior si existe
   const prevTb = menuEl.querySelector(".rich-toolbar");
   if (prevTb) prevTb.remove();
 
-  // Crea toolbar
   const tb = document.createElement("div");
   tb.className = "rich-toolbar";
   Object.assign(tb.style, {
@@ -63,23 +61,22 @@ export function onChangeRichText(ctxMenu, uid, pageId, hideMenu) {
   });
   tb.addEventListener("mousedown", e => e.preventDefault());
 
-  // Botones básicos
   const makeBtn = (cmd, html) => {
     const b = document.createElement("button");
-    b.innerHTML   = html;
     b.dataset.cmd = cmd;
+    b.innerHTML   = html;
     b.addEventListener("mousedown", e => {
       e.preventDefault();
       document.execCommand(cmd, false, null);
     });
     return b;
   };
-  tb.appendChild(makeBtn("bold",        "<b>B</b>"));
-  tb.appendChild(makeBtn("italic",      "<i>I</i>"));
-  tb.appendChild(makeBtn("underline",   "<u>U</u>"));
-  tb.appendChild(makeBtn("strikeThrough","<s>S</s>"));
 
-  // Selector de color
+  tb.appendChild(makeBtn("bold", "<b>B</b>"));
+  tb.appendChild(makeBtn("italic", "<i>I</i>"));
+  tb.appendChild(makeBtn("underline", "<u>U</u>"));
+  tb.appendChild(makeBtn("strikeThrough", "<s>S</s>"));
+
   const inputColor = document.createElement("input");
   inputColor.type        = "color";
   inputColor.dataset.cmd = "foreColor";
@@ -91,7 +88,6 @@ export function onChangeRichText(ctxMenu, uid, pageId, hideMenu) {
 
   menuEl.appendChild(tb);
 
-  // Al salir de foco, guarda y limpia
   el.onblur = async () => {
     el.contentEditable = false;
     hideMenu();
