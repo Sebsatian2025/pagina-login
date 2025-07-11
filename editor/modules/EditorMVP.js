@@ -8,7 +8,7 @@ import { onChangeImage }                 from "./imageEditor.js";
 import { onChangeLink }                  from "./linkEditor.js";
 
 export function EditorMVP({ htmlUrl, uid }) {
-  // Debug: confirma render del componente y valores iniciales
+  // Debug: confirma render del componente
   console.log("🔧 EditorMVP renderizado con htmlUrl, uid:", htmlUrl, uid);
 
   const containerRef = useRef(null);
@@ -22,9 +22,7 @@ export function EditorMVP({ htmlUrl, uid }) {
 
   // Debug: cada vez que ctxMenu cambie, muestra su estado
   useEffect(() => {
-    if (ctxMenu.show) {
-      console.log("📌 ctxMenu está visible:", ctxMenu);
-    }
+    if (ctxMenu.show) console.log("📌 ctxMenu está visible:", ctxMenu);
   }, [ctxMenu]);
 
   const ADMIN_HOST = window.location.origin;
@@ -58,11 +56,11 @@ export function EditorMVP({ htmlUrl, uid }) {
           document.head.appendChild(m.cloneNode(true));
         });
 
-        // C) Clonar todo <link href=...>
+        // C) Clonar <link>
         doc.head.querySelectorAll("link[href]").forEach(link => {
           const nl = link.cloneNode();
           if (!nl.href.startsWith("http")) {
-            nl.href = new URL(nl.getAttribute("href"), origin).href;
+            nl.href = new URL(link.getAttribute("href"), origin).href;
           }
           document.head.appendChild(nl);
         });
@@ -72,7 +70,7 @@ export function EditorMVP({ htmlUrl, uid }) {
           document.head.appendChild(s.cloneNode(true));
         });
 
-        // E) Inyectar admin.css desde origen dinámico
+        // E) Inyectar admin.css
         const adminCss = document.createElement("link");
         adminCss.rel  = "stylesheet";
         adminCss.href = `${ADMIN_HOST}/assets/css/admin.css`;
@@ -110,30 +108,28 @@ export function EditorMVP({ htmlUrl, uid }) {
     });
   }, [html, edits]);
 
-  // 4) Menú contextual
+  // 4) Menú contextual con fix: ignorar clicks dentro de .ctx-menu
   useEffect(() => {
     const handler = e => {
-      console.log("🔍 Click global:", e.target);
+      // Si haces clic dentro del propio menú, no lo ocultes
+      if (e.target.closest(".ctx-menu")) return;
+
       const el = e.target.closest("[data-editable-type]");
       if (!el) {
-        console.log("❌ Click fuera de editable, ocultando ctxMenu");
         setCtxMenu(c => ({ ...c, show: false }));
         return;
       }
-      console.log("✅ Elemento editable detectado:", el, "tipo:", el.dataset.editableType);
       e.preventDefault();
       const r = el.getBoundingClientRect();
-      const newX = r.left + r.width / 2;
-      const newY = r.top - 8;
-      console.log(`📍 Setting ctxMenu coords: x=${newX}, y=${newY}`);
       setCtxMenu({
         show:   true,
-        x:      newX,
-        y:      newY,
+        x:      r.left + r.width / 2,
+        y:      r.top - 8,
         type:   el.dataset.editableType,
         target: el
       });
     };
+
     document.addEventListener("click", handler, true);
     return () => document.removeEventListener("click", handler, true);
   }, []);
@@ -142,7 +138,7 @@ export function EditorMVP({ htmlUrl, uid }) {
     setCtxMenu(c => ({ ...c, show: false }));
   }
 
-  // 5) Render
+  // 5) Renderizado
   return React.createElement(
     React.Fragment,
     null,
@@ -165,19 +161,23 @@ export function EditorMVP({ htmlUrl, uid }) {
         ctxMenu.type === "image" &&
           React.createElement(
             "button",
-            { onClick: () => {
+            {
+              onClick: () => {
                 console.log("🧪 Click en botón CAMBIAR IMAGEN");
                 onChangeImage(ctxMenu, uid, hideMenu);
-              } },
+              }
+            },
             "Cambiar imagen"
           ),
         ctxMenu.type === "link" &&
           React.createElement(
             "button",
-            { onClick: () => {
+            {
+              onClick: () => {
                 console.log("🧪 Click en botón CAMBIAR LINK");
                 onChangeLink(ctxMenu, uid, hideMenu);
-              } },
+              }
+            },
             "Cambiar link"
           )
       ),
