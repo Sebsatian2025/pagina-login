@@ -2,92 +2,119 @@
 import { saveEdit }    from "./firestore.js";
 import { getSelector } from "./utils.js";
 
+const OVERRIDES_ID = "rich-text-editor-overrides";
+
+// Inyecta la hoja de estilos de override una sola vez
+function injectOverrides() {
+  if (document.getElementById(OVERRIDES_ID)) return;
+  const style = document.createElement("style");
+  style.id = OVERRIDES_ID;
+  style.textContent = `
+    /* toolbar general */
+    .rich-toolbar {
+      background-color: rgba(0,0,0,0.85) !important;
+      color:            #fff              !important;
+    }
+
+    /* botones dentro del toolbar */
+    .rich-toolbar button {
+      color:            #fff !important;
+      background:       none !important;
+      border:           none !important;
+      cursor:           pointer !important;
+      padding:          4px    !important;
+      font-size:        14px   !important;
+      line-height:      1      !important;
+    }
+
+    /* color picker */
+    .rich-toolbar input[type=color] {
+      width:        24px    !important;
+      height:       24px    !important;
+      border:       none    !important;
+      padding:      0       !important;
+      margin-left:  4px     !important;
+      cursor:       pointer !important;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 export function onChangeRichText(ctxMenu, uid, hideMenu) {
-  // 1) Activa edición en el elemento
+  // 1) Inyecta overrides CSS
+  injectOverrides();
+
+  // 2) Activa edición en el elemento y fócalo
   const el = ctxMenu.target;
   el.contentEditable = true;
   el.focus();
+  console.log("▶️ EditorRichText ACTIVADO");
 
-  // 2) Localiza el menú contextual (el botón “Editar texto”)
+  // 3) Busca el menú contextual (.ctx-menu) que ya es fixed
   const menuEl = document.querySelector(".ctx-menu");
   if (!menuEl) {
     console.error("❌ No se encontró .ctx-menu");
     return;
   }
 
-  // 3) Construye el contenedor del toolbar
+  // 4) Si hubiera un toolbar previo, lo elimino
+  const prev = menuEl.querySelector(".rich-toolbar");
+  if (prev) prev.remove();
+
+  // 5) Construyo el toolbar como hijo de .ctx-menu
   const tb = document.createElement("div");
   tb.className = "rich-toolbar";
   Object.assign(tb.style, {
-    position:      "absolute",
-    bottom:        "100%",                           // justo encima
-    left:          "50%",                            // centrado
-    transform:     "translateX(-50%) translateY(-8px)", // 8px de separación
-    background:    "rgba(0, 0, 0, 0.85)",             // fondo oscuro semi-trans
-    borderRadius:  "4px",
-    padding:       "6px 8px",
-    display:       "flex",
-    alignItems:    "center",
-    gap:           "6px",
-    zIndex:        "1001"
+    position:  "absolute",
+    bottom:    "100%",                          // encima del botón
+    left:      "50%",                           // centrado
+    transform: "translateX(-50%) translateY(-8px)", // 8px de margen
+    display:   "flex",
+    gap:       "6px",
+    padding:   "6px 8px",
+    borderRadius: "4px",
+    zIndex:    "1001"
   });
 
-  // Evita que el click en el toolbar haga blur en el elemento editable
+  // 6) Evito que clic en toolbar haga blur en el editable
   tb.addEventListener("mousedown", e => e.preventDefault());
 
-  // 4) Helper para crear botones con estilo
-  const makeButton = (cmd, innerHTML) => {
-    const btn = document.createElement("button");
-    btn.dataset.cmd = cmd;
-    btn.innerHTML = innerHTML;
-    Object.assign(btn.style, {
-      background: "none",
-      border:     "none",
-      color:      "#fff",
-      cursor:     "pointer",
-      fontSize:   "14px",
-      padding:    "4px",
-      lineHeight: "1"
-    });
-    btn.addEventListener("mousedown", e => {
+  // 7) Helper para crear un botón formateador
+  const makeBtn = (cmd, inner) => {
+    const b = document.createElement("button");
+    b.dataset.cmd = cmd;
+    b.innerHTML   = inner;
+    b.addEventListener("mousedown", e => {
       e.preventDefault();
       document.execCommand(cmd, false, null);
     });
-    return btn;
+    return b;
   };
 
-  // 5) Añade los controles
-  tb.appendChild(makeButton("bold",        "<b>B</b>"));
-  tb.appendChild(makeButton("italic",      "<i>I</i>"));
-  tb.appendChild(makeButton("underline",   "<u>U</u>"));
-  tb.appendChild(makeButton("strikeThrough","<s>S</s>"));
+  // 8) Añadir controles
+  tb.appendChild(makeBtn("bold",        "<b>B</b>"));
+  tb.appendChild(makeBtn("italic",      "<i>I</i>"));
+  tb.appendChild(makeBtn("underline",   "<u>U</u>"));
+  tb.appendChild(makeBtn("strikeThrough","<s>S</s>"));
 
-  // Color picker
   const colorInput = document.createElement("input");
-  colorInput.type = "color";
+  colorInput.type   = "color";
   colorInput.dataset.cmd = "foreColor";
-  Object.assign(colorInput.style, {
-    width:      "24px",
-    height:     "24px",
-    border:     "none",
-    padding:    "0",
-    cursor:     "pointer"
-  });
-  // aplica color al input
   colorInput.addEventListener("input", e => {
     document.execCommand("foreColor", false, e.target.value);
   });
   colorInput.addEventListener("mousedown", e => e.preventDefault());
   tb.appendChild(colorInput);
 
-  // 6) Incrústalo dentro de .ctx-menu para que siga el scroll
+  // 9) Incrusto el toolbar en el menú
   menuEl.appendChild(tb);
+  console.log("✅ Toolbar inyectado (con overrides CSS)");
 
-  // 7) Al perder foco, guarda y limpia
+  // 10) Al perder foco, guardo y limpio
   el.onblur = async () => {
     el.contentEditable = false;
-    hideMenu();  // oculta el .ctx-menu
-    tb.remove(); // quita el toolbar
+    hideMenu();   // cierra .ctx-menu
+    tb.remove();  // quita el toolbar
 
     const selector = getSelector(el);
     const html     = el.innerHTML;
