@@ -9,38 +9,46 @@ export function onChangeRichText(ctxMenu, uid, hideMenu) {
 
   console.log("▶️ EditorRichText ACTIVADO");
 
-  // 1. Crear toolbar y posicionarlo en el centro-bajo (fixed)
+  // 1) Obtener rect del texto o selección
+  const sel  = window.getSelection();
+  const rect = sel.rangeCount
+    ? sel.getRangeAt(0).getBoundingClientRect()
+    : el.getBoundingClientRect();
+
+  // 2) Crear toolbar
   const tb = document.createElement("div");
   tb.className = "rich-toolbar";
   Object.assign(tb.style, {
-    position:   "fixed",
-    left:       "50%",      // centro horizontal
-    top:        "60%",      // 60% desde arriba (ajusta este valor al gusto)
-    transform:  "translate(-50%, -50%)",
-    background: "#fff",
-    padding:    "8px",
-    boxShadow:  "0 2px 8px rgba(0,0,0,0.15)",
-    borderRadius:"4px",
-    zIndex:     "10001"
+    position:  "fixed",
+    zIndex:    "10001",
+    background:"#fff",
+    padding:   "6px",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
   });
 
-  // 2. Evitar blur cuando hacemos clic dentro del toolbar
+  // 3) Calcular posición con margen 8px
+  let top  = rect.top - tb.offsetHeight - 8;
+  if (top < 0) top = rect.bottom + 8;   // si no cabe arriba, cae abajo
+  const left = rect.left + rect.width/2 - (tb.offsetWidth/2);
+
+  tb.style.top  = `${top}px`;
+  tb.style.left = `${left}px`;
+
+  // 4) Prevenir blur al clicar en toolbar
   tb.addEventListener("mousedown", e => e.preventDefault());
 
-  // 3. Botones de formato
+  // 5) Botones de formato
   tb.innerHTML = `
     <button data-cmd="bold"><b>B</b></button>
     <button data-cmd="italic"><i>I</i></button>
     <button data-cmd="underline"><u>U</u></button>
     <button data-cmd="strikeThrough"><s>S</s></button>
-    <input type="color" data-cmd="foreColor" title="Color"
-           style="width:24px;height:24px;border:none;padding:0;margin-left:8px;" />
+    <input type="color" data-cmd="foreColor" style="width:24px;height:24px;border:none;" />
   `;
-
   document.body.appendChild(tb);
-  console.log("✅ Toolbar inyectado en centro-bajo");
+  console.log("✅ Toolbar inyectado (Inline Bubble)");
 
-  // 4. Aplicar comandos sin perder foco
+  // 6) Ejecutar comandos
   tb.querySelectorAll("[data-cmd]").forEach(control => {
     control.addEventListener("mousedown", e => {
       e.preventDefault();
@@ -48,19 +56,13 @@ export function onChangeRichText(ctxMenu, uid, hideMenu) {
       const val = control.tagName === "INPUT" ? control.value : null;
       document.execCommand(cmd, false, val);
     });
-    if (control.tagName === "INPUT") {
-      control.addEventListener("input", e => {
-        document.execCommand(control.dataset.cmd, false, e.target.value);
-      });
-    }
   });
 
-  // 5. Al perder foco guardamos y quitamos el toolbar
+  // 7) Guardar al blur
   el.onblur = async () => {
     el.contentEditable = false;
     hideMenu();
     tb.remove();
-
     const selector = getSelector(el);
     const html     = el.innerHTML;
     try {
