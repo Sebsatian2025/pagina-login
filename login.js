@@ -6,7 +6,6 @@ import { getAuth, signInWithEmailAndPassword }
 import { getFirestore, doc, getDoc }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// 1) Configuración de Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyBT02qJDOa6N1giU-TmSd7gZrsVLtamIfc",
   authDomain: "admin-pwa-f1cf8.firebaseapp.com",
@@ -17,22 +16,18 @@ const firebaseConfig = {
   measurementId: "G-F0MEWWTCGQ"
 };
 
-// 2) Inicializar Firebase
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getFirestore(app);
 
-// 3) Referencias del DOM
 const loginForm    = document.getElementById("loginForm");
 const loginError   = document.getElementById("loginError");
 const loginSuccess = document.getElementById("loginPass");
 
-// 4) Manejo de submit
 loginForm?.addEventListener("submit", async (e) => {
   e.preventDefault();
   console.clear();
 
-  // Ocultar alertas
   loginError.classList.add("d-none");
   loginSuccess.classList.add("d-none");
 
@@ -44,7 +39,6 @@ loginForm?.addEventListener("submit", async (e) => {
   }
 
   let uid;
-  // 5) Intentar autenticación
   try {
     const credential = await signInWithEmailAndPassword(auth, email, password);
     uid = credential.user.uid;
@@ -54,7 +48,6 @@ loginForm?.addEventListener("submit", async (e) => {
     return loginError.classList.remove("d-none");
   }
 
-  // 6) Leer URL de landing desde Firestore
   let baseUrl = window.location.origin;
   try {
     const siteSnap = await getDoc(doc(db, "sites", uid));
@@ -66,7 +59,9 @@ loginForm?.addEventListener("submit", async (e) => {
     return loginError.classList.remove("d-none");
   }
 
-  // 7) Redirigir al editor
+  // 🔧 Evitar doble barra accidental
+  baseUrl = baseUrl.replace(/\/$/, "");
+
   const htmlUrl = encodeURIComponent(`${baseUrl}/index.html`);
   const destino = `/editor/editor.html?uid=${uid}&htmlUrl=${htmlUrl}`;
 
