@@ -8,13 +8,14 @@ export function onChangeBgImage(ctxMenu, uid, pageId, hideMenu) {
   chooser.type   = "file";
   chooser.accept = "image/*";
   chooser.style.display = "none";
-  document.body.append(chooser);
+  document.body.appendChild(chooser);
 
   chooser.onchange = () => {
     const file = chooser.files[0];
     if (!file) {
       chooser.remove();
-      return hideMenu();
+      hideMenu();
+      return;
     }
     const reader = new FileReader();
     reader.onload = async e => {
@@ -23,7 +24,12 @@ export function onChangeBgImage(ctxMenu, uid, pageId, hideMenu) {
       el.style.backgroundPosition = "center";
 
       const selector = getSelector(el);
-      await saveEdit(uid, pageId, selector, "style.backgroundImage", e.target.result);
+      try {
+        await saveEdit(uid, pageId, selector, "style.backgroundImage", e.target.result);
+        console.log("✔️ Fondo guardado:", selector);
+      } catch(err) {
+        console.error("❌ Error guardando fondo:", err);
+      }
     };
     reader.readAsDataURL(file);
 
