@@ -10,8 +10,8 @@ export function onChangeLink(ctxMenu, uid, pageId, hideMenu) {
     return;
   }
   a.href = url;
-
   const selector = getSelector(a);
+
   saveEdit(uid, pageId, selector, "href", url)
     .then(() => console.log("✔️ Link guardado:", selector))
     .catch(err => console.error("❌ Error guardando link:", err))
