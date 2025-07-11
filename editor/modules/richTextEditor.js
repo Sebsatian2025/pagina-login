@@ -1,3 +1,4 @@
+// public/editor/modules/richTextEditor.js
 import { saveEdit }    from "./firestore.js";
 import { getSelector } from "./utils.js";
 
@@ -22,25 +23,29 @@ export function onChangeRichText(
 ) {
   injectOverrides();
 
-  const el = ctxMenu.target;
-  const prevHtml = el.innerHTML;    // Guardamos valor previo
+  const el       = ctxMenu.target;
+  const prevHtml = el.innerHTML;
   el.contentEditable = true;
   el.focus();
 
   const menuEl = document.querySelector(".ctx-menu");
   if (!menuEl) return;
 
-  // Elimina toolbar anterior si existiera
   const oldTb = menuEl.querySelector(".rich-toolbar");
   if (oldTb) oldTb.remove();
 
-  // Construye el toolbar
   const tb = document.createElement("div");
   tb.className = "rich-toolbar";
   Object.assign(tb.style, {
-    position: "absolute", bottom: "100%", left: "50%",
-    transform: "translateX(-50%) translateY(-8px)",
-    display: "flex", gap: "6px", padding: "6px 8px", borderRadius: "4px", zIndex: 1001
+    position:      "absolute",
+    bottom:        "100%",
+    left:          "50%",
+    transform:     "translateX(-50%) translateY(-8px)",
+    display:       "flex",
+    gap:           "6px",
+    padding:       "6px 8px",
+    borderRadius:  "4px",
+    zIndex:        "1001"
   });
   tb.addEventListener("mousedown", e => e.preventDefault());
 
@@ -54,8 +59,11 @@ export function onChangeRichText(
     });
     return b;
   };
-  tb.append(makeBtn("bold","<b>B</b>"), makeBtn("italic","<i>I</i>"),
-            makeBtn("underline","<u>U</u>"), makeBtn("strikeThrough","<s>S</s>"));
+  tb.append(makeBtn("bold","<b>B</b>"));
+  tb.append(makeBtn("italic","<i>I</i>"));
+  tb.append(makeBtn("underline","<u>U</u>"));
+  tb.append(makeBtn("strikeThrough","<s>S</s>"));
+
   const colorInput = document.createElement("input");
   colorInput.type        = "color";
   colorInput.dataset.cmd = "foreColor";
@@ -75,7 +83,7 @@ export function onChangeRichText(
     const selector = getSelector(el);
     const newHtml  = el.innerHTML;
 
-    // Validación de líneas
+    // Validar líneas
     const cfg = sizesMap.get(selector);
     if (cfg) {
       const newHeight = el.getBoundingClientRect().height;
@@ -87,12 +95,11 @@ export function onChangeRichText(
       }
     }
 
-    // Guardar si cabe
     try {
       await saveEdit(uid, pageId, selector, "html", newHtml);
       console.log("✔️ Texto guardado:", selector);
     } catch(err) {
-      console.error("❌ Error guardando:", err);
+      console.error("❌ Error guardando texto:", err);
       el.innerHTML = prevHtml;
     }
   };
