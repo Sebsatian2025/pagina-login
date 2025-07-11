@@ -20,7 +20,7 @@ const firebaseConfig = {
   measurementId: "G-F0MEWWTCGQ"
 };
 
-// 2) Inicializa Auth y Firestore internamente
+// 2) Inicializa Auth
 console.log("🔑 Inicializando Auth");
 const auth = initAuth(firebaseConfig);
 
