@@ -9,46 +9,39 @@ export function onChangeRichText(ctxMenu, uid, hideMenu) {
 
   console.log("▶️ EditorRichText ACTIVADO");
 
-  // 1) Obtener rect del texto o selección
-  const sel  = window.getSelection();
-  const rect = sel.rangeCount
-    ? sel.getRangeAt(0).getBoundingClientRect()
-    : el.getBoundingClientRect();
-
-  // 2) Crear toolbar
+  // Crear toolbar fijo arriba
   const tb = document.createElement("div");
   tb.className = "rich-toolbar";
   Object.assign(tb.style, {
-    position:  "fixed",
-    zIndex:    "10001",
-    background:"#fff",
-    padding:   "6px",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+    position:   "fixed",
+    top:        "0",
+    left:       "0",
+    right:      "0",
+    background: "#fff",
+    padding:    "8px 12px",
+    boxShadow:  "0 2px 4px rgba(0,0,0,0.1)",
+    zIndex:     "10001",
+    display:    "flex",
+    gap:        "8px"
   });
 
-  // 3) Calcular posición con margen 8px
-  let top  = rect.top - tb.offsetHeight - 8;
-  if (top < 0) top = rect.bottom + 8;   // si no cabe arriba, cae abajo
-  const left = rect.left + rect.width/2 - (tb.offsetWidth/2);
-
-  tb.style.top  = `${top}px`;
-  tb.style.left = `${left}px`;
-
-  // 4) Prevenir blur al clicar en toolbar
+  // Evitar blur
   tb.addEventListener("mousedown", e => e.preventDefault());
 
-  // 5) Botones de formato
+  // Botones
   tb.innerHTML = `
     <button data-cmd="bold"><b>B</b></button>
     <button data-cmd="italic"><i>I</i></button>
     <button data-cmd="underline"><u>U</u></button>
     <button data-cmd="strikeThrough"><s>S</s></button>
-    <input type="color" data-cmd="foreColor" style="width:24px;height:24px;border:none;" />
+    <input type="color" data-cmd="foreColor" />
+    <button onclick="this.parentElement.remove()">Cerrar</button>
   `;
-  document.body.appendChild(tb);
-  console.log("✅ Toolbar inyectado (Inline Bubble)");
 
-  // 6) Ejecutar comandos
+  document.body.appendChild(tb);
+  console.log("✅ Toolbar inyectado (Sticky Top)");
+
+  // Ejecutar comandos
   tb.querySelectorAll("[data-cmd]").forEach(control => {
     control.addEventListener("mousedown", e => {
       e.preventDefault();
@@ -58,7 +51,7 @@ export function onChangeRichText(ctxMenu, uid, hideMenu) {
     });
   });
 
-  // 7) Guardar al blur
+  // Al perder foco
   el.onblur = async () => {
     el.contentEditable = false;
     hideMenu();
