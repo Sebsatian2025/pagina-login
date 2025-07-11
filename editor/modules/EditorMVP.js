@@ -1,104 +1,98 @@
 // public/editor/modules/EditorMVP.js
 import React, { useState, useEffect, useRef } from "https://esm.sh/react@18.2.0";
-import ReactDOM from "https://esm.sh/react-dom@18.2.0";
+import ReactDOM                                from "https://esm.sh/react-dom@18.2.0";
 
-import { loadEdits } from "./firestore.js";
-import { onChangeRichText } from "./richTextEditor.js";
-import { onChangeImage } from "./imageEditor.js";
-import { onChangeLink }  from "./linkEditor.js";
-import { onChangeBgImage } from "./bgImageEditor.js";
+import { loadEdits }         from "./firestore.js";
+import { onChangeRichText }  from "./richTextEditor.js";
+import { onChangeImage }     from "./imageEditor.js";
+import { onChangeLink }      from "./linkEditor.js";
+import { onChangeBgImage }   from "./bgImageEditor.js";
+import { onChangeBgColor }   from "./bgColorEditor.js";  // nuevo
 
 export function EditorMVP({ htmlUrl, uid }) {
   const containerRef = useRef(null);
-  const pageId = encodeURIComponent(htmlUrl);
+  const pageId       = encodeURIComponent(htmlUrl);
 
   const [html, setHtml]   = useState("");
   const [edits, setEdits] = useState({});
   const [ctxMenu, setCtxMenu] = useState({
-    show: false, x: 0, y: 0, types: [], target: null
+    show: false, x:0, y:0, types:[], target:null
   });
 
-  // 1) Carga ediciones
+  // 1) Carga ediciones previas
   useEffect(() => {
     if (!uid) return;
     loadEdits(uid, pageId).then(setEdits).catch(console.error);
   }, [uid, pageId]);
 
-  // 2) Fetch + head + admin.css
+  // 2) Fetch HTML + clonar <head> + admin.css
   useEffect(() => {
     if (!htmlUrl) return;
-    fetch(htmlUrl)
-      .then(r => r.text())
-      .then(text => {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(text, "text/html");
-        const origin = new URL(htmlUrl).origin;
+    fetch(htmlUrl).then(r=>r.text()).then(text=>{
+      const parser = new DOMParser();
+      const doc    = parser.parseFromString(text,"text/html");
+      const origin = new URL(htmlUrl).origin;
 
-        // Inyecta <base>
-        const base = document.createElement("base");
-        base.href = origin + "/";
-        document.head.insertBefore(base, document.head.firstChild);
+      const base = document.createElement("base");
+      base.href  = origin + "/";
+      document.head.insertBefore(base, document.head.firstChild);
 
-        // Clona meta, link y style
-        doc.head.querySelectorAll("meta, link[href], style").forEach(n => {
-          const c = n.cloneNode(true);
-          if (c.tagName === "LINK" && !c.href.startsWith("http")) {
-            c.href = new URL(n.getAttribute("href"), origin).href;
-          }
-          document.head.appendChild(c);
-        });
+      doc.head.querySelectorAll("meta, link[href], style").forEach(n=>{
+        const c = n.cloneNode(true);
+        if (c.tagName==="LINK" && !c.href.startsWith("http")) {
+          c.href = new URL(n.getAttribute("href"), origin).href;
+        }
+        document.head.appendChild(c);
+      });
 
-        // Admin.css
-        const css = document.createElement("link");
-        css.rel  = "stylesheet";
-        css.href = `${window.location.origin}/assets/css/admin.css`;
-        document.head.appendChild(css);
+      const css = document.createElement("link");
+      css.rel  = "stylesheet";
+      css.href = `${window.location.origin}/assets/css/admin.css`;
+      document.head.appendChild(css);
 
-        setHtml(doc.body.innerHTML);
-      })
-      .catch(console.error);
+      setHtml(doc.body.innerHTML);
+    }).catch(console.error);
   }, [htmlUrl]);
 
-  // 3) Render + aplicar ediciones + marcar tipos
+  // 3) Render + aplica ediciones + marca tipos + iconos
   useEffect(() => {
     if (!html) return;
     const root = containerRef.current;
     root.innerHTML = html;
 
-    // Aplica ediciones guardadas
-    Object.entries(edits).forEach(([sel, ch]) => {
+    Object.entries(edits).forEach(([sel,ch])=>{
       const el = root.querySelector(sel);
       if (!el) return;
-      if (ch.html) el.innerHTML = ch.html;
-      if (ch.text) el.innerText  = ch.text;
-      if (ch.href) el.href        = ch.href;
-      if (ch.src)  el.src         = ch.src;
+      if (ch.html)  el.innerHTML = ch.html;
+      if (ch.text)  el.innerText  = ch.text;
+      if (ch.href)  el.href       = ch.href;
+      if (ch.src)   el.src        = ch.src;
       if (ch.style?.backgroundImage) {
         el.style.backgroundImage    = `url(${ch.style.backgroundImage})`;
         el.style.backgroundSize     = "cover";
         el.style.backgroundPosition = "center";
       }
+      if (ch.style?.backgroundColor) {
+        el.style.backgroundColor = ch.style.backgroundColor;
+      }
     });
 
-    // Marca tipos y añade icono sobre imágenes
-    root.querySelectorAll("*").forEach(el => {
+    root.querySelectorAll("*").forEach(el=>{
       el.removeAttribute("data-editable-types");
       const types = [];
 
-      //  → Texto: incluye ahora también <a>
-      if (
-        ["H1","H2","H3","P","SPAN","DIV","A"].includes(el.tagName) &&
-        el.textContent.trim()
-      ) {
+      // Texto (incluye <a>)
+      if (["H1","H2","H3","P","SPAN","DIV","A"].includes(el.tagName)
+          && el.textContent.trim()) {
         types.push("text");
       }
 
-      //  → Link: todos los <a> (si efectivamente llevan href)
+      // Link
       if (el.tagName === "A") {
         types.push("link");
       }
 
-      //  → Imagen normal
+      // Imagen normal
       if (el.tagName === "IMG") {
         types.push("image");
         el.style.cursor = "pointer";
@@ -106,7 +100,6 @@ export function EditorMVP({ htmlUrl, uid }) {
         if (getComputedStyle(parent).position === "static") {
           parent.style.position = "relative";
         }
-        // Icono lápiz
         const icon = document.createElement("div");
         icon.className = "img-edit-icon";
         icon.innerText = "✎";
@@ -127,20 +120,26 @@ export function EditorMVP({ htmlUrl, uid }) {
           zIndex:     "1001"
         });
         parent.appendChild(icon);
-        parent.addEventListener("mouseenter", () => icon.style.display = "block");
-        parent.addEventListener("mouseleave", () => icon.style.display = "none");
-        icon.addEventListener("click", e => {
+        parent.addEventListener("mouseenter", ()=>icon.style.display="block");
+        parent.addEventListener("mouseleave", ()=>icon.style.display="none");
+        icon.addEventListener("click", e=>{
           e.stopPropagation();
-          onChangeImage({ target: el }, uid, pageId, () =>
-            setCtxMenu(m => ({ ...m, show: false }))
-          );
+          onChangeImage({target:el}, uid, pageId, ()=>setCtxMenu(m=>({...m,show:false})));
         });
       }
 
-      //  → Fondo
-      const bg = getComputedStyle(el).backgroundImage;
-      if (bg && bg.startsWith("url(") && bg !== "none") {
+      // Fondo imagen
+      const bgImg = getComputedStyle(el).backgroundImage;
+      if (bgImg && bgImg.startsWith("url(") && bgImg!=="none") {
         types.push("bgImage");
+      }
+
+      // Fondo color
+      const bgColor = getComputedStyle(el).backgroundColor;
+      if (bgColor 
+          && !bgImg 
+          && !bgColor.startsWith("rgba(0, 0, 0, 0)") ) {
+        types.push("bgColor");
       }
 
       if (types.length) {
@@ -149,13 +148,13 @@ export function EditorMVP({ htmlUrl, uid }) {
     });
   }, [html, edits, uid, pageId]);
 
-  // 4) Clic global para menú contextual (texto / link / fondo)
+  // 4) Global click para menú contextual
   useEffect(() => {
     const handler = e => {
       if (e.target.closest(".ctx-menu")) return;
       const el = e.target.closest("[data-editable-types]");
       if (!el) {
-        setCtxMenu(m => ({ ...m, show: false }));
+        setCtxMenu(m=>({...m,show:false}));
         return;
       }
       e.preventDefault();
@@ -170,43 +169,48 @@ export function EditorMVP({ htmlUrl, uid }) {
       });
     };
     document.addEventListener("click", handler, true);
-    return () => document.removeEventListener("click", handler, true);
+    return ()=>document.removeEventListener("click", handler, true);
   }, []);
 
-  const hideMenu = () => setCtxMenu(m => ({ ...m, show: false }));
+  const hideMenu = ()=>setCtxMenu(m=>({...m,show:false}));
 
-  // 5) Render final
+  // 5) Render
   return React.createElement(
-    React.Fragment,
-    null,
-    React.createElement("div", { ref: containerRef }),
+    React.Fragment, null,
+    React.createElement("div",{ref:containerRef}),
     ctxMenu.show && ReactDOM.createPortal(
       React.createElement(
         "div",
-        {
-          className: "ctx-menu",
-          style:     { position: "fixed", left: ctxMenu.x, top: ctxMenu.y }
+        { className:"ctx-menu",
+          style:{position:"fixed",left:ctxMenu.x,top:ctxMenu.y}
         },
-        // EDITAR TEXTO
+        // Editar texto
         ctxMenu.types.includes("text") &&
           React.createElement(
             "button",
-            { onClick: () => onChangeRichText(ctxMenu, uid, pageId, hideMenu) },
+            { onClick:()=>onChangeRichText(ctxMenu,uid,pageId,hideMenu) },
             "Editar texto"
           ),
-        // EDITAR LINK
+        // Editar link
         ctxMenu.types.includes("link") &&
           React.createElement(
             "button",
-            { onClick: () => onChangeLink(ctxMenu, uid, pageId, hideMenu) },
+            { onClick:()=>onChangeLink(ctxMenu,uid,pageId,hideMenu) },
             "Editar link"
           ),
-        // EDITAR FONDO
+        // Editar fondo imagen
         ctxMenu.types.includes("bgImage") &&
           React.createElement(
             "button",
-            { onClick: () => onChangeBgImage(ctxMenu, uid, pageId, hideMenu) },
+            { onClick:()=>onChangeBgImage(ctxMenu,uid,pageId,hideMenu) },
             "Editar fondo"
+          ),
+        // Editar color fondo
+        ctxMenu.types.includes("bgColor") &&
+          React.createElement(
+            "button",
+            { onClick:()=>onChangeBgColor(ctxMenu,uid,pageId,hideMenu) },
+            "Editar color"
           )
       ),
       document.body
